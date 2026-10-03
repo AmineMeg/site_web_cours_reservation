@@ -45,6 +45,31 @@ test("blog rejects HTML, links, unsupported nodes, attributes, marks and tree sh
   ]) assert.throws(() => validateDocument(document, origin));
 });
 
+test("imported headings normalize omitted defaults before storage, without accepting unsafe attributes", () => {
+  for (const heading of [
+    { type: "heading", content: [text] },
+    { type: "heading", attrs: null, content: [text] },
+    { type: "heading", attrs: {}, content: [text] },
+  ]) {
+    const normalized = validateDocument({ type: "doc", content: [heading] }, origin);
+    assert.deepEqual(normalized.content[0].attrs, { level: 2 });
+    assert.deepEqual(validateDocument(normalized, origin), normalized);
+  }
+  for (const attrs of [false, "2", { level: "2" }, { level: 1 }, { onclick: "alert(1)" }]) {
+    assert.throws(() => validateDocument({ type: "doc", content: [{ type: "heading", attrs, content: [text] }] }, origin));
+  }
+});
+
+test("real Tiptap heading JSON stays compatible with blog validation", () => {
+  const { getSchema } = require("@tiptap/core");
+  const StarterKit = require("@tiptap/starter-kit").default;
+  const schema = getSchema([StarterKit.configure({ heading: { levels: [2, 3] } })]);
+  for (const level of [2, 3]) {
+    const json = schema.node("doc", null, [schema.node("heading", { level }, [schema.text("Pasted text")])]).toJSON();
+    assert.equal(validateDocument(json, origin).content[0].attrs.level, level);
+  }
+});
+
 test("blog validates image origin, path, protocol and exact URL", () => {
   assert.equal(validImageUrl(image, origin), true);
   for (const url of [

@@ -87,13 +87,14 @@ export function BlogEditor({ post, imageOrigin }: { post?: BlogPost; imageOrigin
     setMessage("");
     startTransition(async () => {
       try {
-        const result = await saveBlogPost({ id, updatedAt, title, slug, excerpt, document: editor?.getJSON() ?? document, cover_image: cover, status: nextStatus });
+        const normalizedDocument = validateDocument(editor?.getJSON() ?? document, imageOrigin);
+        const result = await saveBlogPost({ id, updatedAt, title, slug, excerpt, document: normalizedDocument, cover_image: cover, status: nextStatus });
         if (result.error) { fail(result.error); return; }
         setId(result.id); setUpdatedAt(result.updatedAt); setStatus(nextStatus); setDirty(false);
         setIsError(false); setMessage(nextStatus === "published" ? "Article published. Your readers can see it now." : "Draft saved. It is not visible to readers.");
         if (!id) router.replace(`/admin/blog/${result.id}`);
         router.refresh();
-      } catch { fail("Unable to save. Please try again."); }
+      } catch (error) { fail(error instanceof Error ? error.message : "Unable to save. Please try again."); }
     });
   }
   async function upload(file?: File) {

@@ -76,10 +76,13 @@ export function validateDocument(value: unknown, origin: string): BlogNode {
       }
     } else if (node.text !== undefined || node.marks !== undefined) throw new Error("Invalid node properties.");
     if (type === "heading") {
-      if (!object(node.attrs)) throw new Error("Invalid heading.");
-      keys(node.attrs, ["level"]);
-      if (node.attrs.level !== 2 && node.attrs.level !== 3) throw new Error("Invalid heading level.");
-      result.attrs = { level: node.attrs.level };
+      // Imported/editor documents can omit default attributes; persist an explicit H2.
+      const attrs = node.attrs === undefined || node.attrs === null ? {} : node.attrs;
+      if (!object(attrs)) throw new Error("Invalid heading.");
+      keys(attrs, ["level"]);
+      const level = attrs.level ?? 2;
+      if (level !== 2 && level !== 3) throw new Error("Invalid heading level.");
+      result.attrs = { level };
     } else if (type === "orderedList" && node.attrs !== undefined) {
       if (!object(node.attrs)) throw new Error("Invalid list.");
       keys(node.attrs, ["start", "type"]);
