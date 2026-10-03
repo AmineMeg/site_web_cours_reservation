@@ -5,12 +5,15 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 import { t } from "@/lib/i18n";
 import { accountText } from "@/lib/i18n/account";
+import { websiteText } from "@/lib/i18n/website";
 
 const items = [
   { href: "/admin/contacts", icon: "📩", label: t.admin.nav.contacts, badgeKey: "contacts" as const },
   { href: "/admin/students", icon: "👩‍🎓", label: t.admin.nav.students },
   { href: "/admin/schedule", icon: "📅", label: t.admin.nav.schedule },
   { href: "/admin/messages", icon: "✉️", label: t.admin.nav.messages },
+  { href: "/admin/website", icon: "🌐", label: websiteText.nav },
+  { href: "/admin/blog", icon: "📝", label: t.nav.blog },
   { href: "/security/settings", icon: "🔒", label: accountText.security },
 ];
 

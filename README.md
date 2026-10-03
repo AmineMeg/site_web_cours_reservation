@@ -11,6 +11,9 @@ compatible host for the teacher's commercial website.
 | Account activation / password recovery | `/auth/*` | Invitation or recovery link recipient |
 | Two-step verification and account security | `/security` / `/security/settings` | Teacher & students |
 | Teacher panel | `/admin` (New contacts · My students · Schedule · Messages) | Teacher only |
+| Homepage editor | `/admin/website` | Teacher only, MFA required |
+| Blog editor | `/admin/blog` | Teacher only, MFA required |
+| Public articles | `/blog` | Everyone; published articles only |
 | Student portal | `/dashboard` (Book · Profile · Contact teacher) | Students only |
 
 ## Architecture
@@ -199,6 +202,62 @@ tools; there is no public MFA bypass.
 2. Register it in `src/lib/i18n/index.ts` and set `NEXT_PUBLIC_LOCALE=pt`.
 3. Translate the additional account and security dictionaries under `src/lib/i18n`
    when introducing Portuguese.
+
+## Homepage and blog administration
+
+For an existing project, run these additional migrations **before deploying** the
+content-management version:
+
+1. [`supabase/website.sql`](supabase/website.sql), after the base schema and security migration.
+2. [`supabase/blog.sql`](supabase/blog.sql), after the base schema and security migration.
+
+Each migration explicitly protects its new tables with the existing MFA gate.
+Do not assume the earlier security migration automatically protects future tables.
+
+### Editing the homepage
+
+Open **My website** in the teacher sidebar. Choose Welcome section, About me,
+Student testimonials or Contact section. Edit the clearly labelled text fields,
+use **Preview my changes** and press **Save and update my website**.
+
+- Saved text is public immediately; there is no need to redeploy.
+- The original English content is used until the first save.
+- The preview uses the real homepage components; its contact form is disabled.
+- Two editors cannot silently overwrite each other: if another window saved first,
+  reload before saving.
+- Text is rendered as plain text, never as executable HTML.
+- Editing the visible teacher/site name does not change login email addresses,
+  notification recipients or the teacher's account; those remain separate settings.
+
+### Blog
+
+Open **Blog** in the teacher sidebar to create and edit articles. Drafts stay private;
+only published articles appear at `/blog`. Review the article before publishing.
+Images use Supabase Storage; configure the bucket and policies by running the blog
+migration rather than manually opening storage uploads to the public.
+
+The visual editor supports headings, bold/italic text, lists and uploaded images.
+Articles can be saved as drafts, previewed privately, published, unpublished or
+deleted with confirmation. Their address stays fixed after creation; concurrent
+edits report a conflict rather than silently overwriting a newer version.
+
+**Image privacy:** uploaded blog images are public by URL, even when attached to a
+draft. Do not upload private student photos or confidential material. Article text
+stays private until publication. Removing an image from an article does not delete
+the storage file, because other articles may use it.
+
+### Content tests
+
+Run the homepage/blog tests with Node's test runner:
+
+```powershell
+node --test tests\website.test.cjs tests\blog.test.cjs tests\blog-sql.test.cjs
+```
+
+Database tests need PGlite. Point `PGLITE_PATH` at a `node_modules` folder containing
+`@electric-sql/pglite`, and `BLOG_PGLITE_PATH` at the module itself. Without these
+dependencies, database tests explicitly report **SKIP**; a passing JavaScript-only
+test run is not proof that the SQL migrations were tested.
 
 ## Scripts
 

@@ -5,12 +5,20 @@ import { submitContact, type ContactFormState } from "@/app/actions/contact";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Notice } from "@/components/ui/Notice";
 import { t } from "@/lib/i18n";
+import type { HomepageContent } from "@/lib/website-content";
 
 const initialState: ContactFormState = { status: "idle", message: "" };
 
-export function ContactForm() {
+export function ContactForm({ content, preview = false }: { content?: HomepageContent; preview?: boolean }) {
   const [state, formAction] = useActionState(submitContact, initialState);
-  const c = t.landing.contact;
+  const c = {
+    ...t.landing.contact,
+    ...(content ? {
+      name: content.contactName, email: content.contactEmail, phone: content.contactPhone,
+      message: content.contactMessage, messagePlaceholder: content.contactPlaceholder,
+      submit: content.contactSubmit,
+    } : {}),
+  };
 
   if (state.status === "success") {
     return <Notice ok>{state.message}</Notice>;
@@ -20,6 +28,7 @@ export function ContactForm() {
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
+      <fieldset disabled={preview} className="space-y-5">
       <div>
         <label htmlFor="name" className="label">
           {c.name} *
@@ -59,6 +68,7 @@ export function ContactForm() {
       <SubmitButton pendingText={c.sending} size="xl" className="w-full">
         {c.submit}
       </SubmitButton>
+      </fieldset>
     </form>
   );
 }

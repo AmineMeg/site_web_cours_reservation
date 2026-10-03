@@ -1,8 +1,12 @@
 import { t } from "@/lib/i18n";
 import { buttonClass } from "@/components/ui/button";
+import type { HomepageContent } from "@/lib/website-content";
 
-export function Hero() {
-  const h = t.landing.hero;
+export function Hero({ content }: { content?: HomepageContent }) {
+  const h = content ? {
+    badge: content.heroBadge, title: content.heroTitle, subtitle: content.heroSubtitle,
+    ctaPrimary: content.heroPrimary, ctaSecondary: content.heroSecondary,
+  } : t.landing.hero;
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-accent-50">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 md:grid-cols-2 md:py-28">
