@@ -50,6 +50,8 @@ export interface Booking {
   cancel_message: string | null;
   cancelled_at: string | null;
   created_at: string;
+  credits_used: number;
+  teacher_request_id: string | null;
 }
 
 export type StudentCard = Pick<Profile, "id" | "full_name" | "email" | "phone" | "objectives" | "credits">;

@@ -1,12 +1,13 @@
 import type { Dictionary } from "./en";
+import { teacherBookingText } from "./teacher-booking";
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 export const pt: Dictionary = {
   locale: "pt-BR",
   common: {
-    appName: "Espanhol com María",
-    footerText: "Espanhol com María. Todos os direitos reservados.",
+    appName: "Espanhol com a Professora Teixeira",
+    footerText: "Espanhol com a Professora Teixeira. Todos os direitos reservados.",
     save: "Salvar", saving: "Salvando…", cancel: "Cancelar", close: "Fechar", back: "Voltar",
     signOut: "Sair", error: "Algo deu errado. Tente novamente.",
     notAllowed: "Você não tem permissão para fazer isso.",
@@ -32,7 +33,7 @@ export const pt: Dictionary = {
       title: "Conheça sua professora",
       role: "Professora nativa de espanhol · Mais de 20 anos de experiência",
       paragraphs: [
-        "¡Hola! Sou a María. Nasci em Salamanca, na Espanha, e ensino espanhol há mais de vinte anos. Nesse tempo, tive a alegria de acompanhar mais de mil alunos, de iniciantes a profissionais com uma rotina corrida, ajudando cada um a falar espanhol com confiança.",
+        "¡Hola! Sou a Professora Teixeira. Nasci em Salamanca, na Espanha, e ensino espanhol há mais de vinte anos. Nesse tempo, tive a alegria de acompanhar mais de mil alunos, de iniciantes a profissionais com uma rotina corrida, ajudando cada um a falar espanhol com confiança.",
         "Minhas aulas são acolhedoras, pacientes e feitas para você. Conversamos desde o primeiro dia, e a gramática e o vocabulário aparecem naturalmente, passo a passo. Seja para uma viagem, uma prova (DELE / SIELE), um novo trabalho ou para conversar com familiares e amigos que falam espanhol, vamos criar um plano a partir dos seus objetivos.",
         "Acredito que aprender um idioma deve ser como uma conversa entre amigos: leve, encorajadora e cheia de boas risadas. Estou ansiosa para conhecer você!",
       ],
@@ -45,9 +46,9 @@ export const pt: Dictionary = {
     testimonials: {
       title: "O que meus alunos dizem",
       items: [
-        { quote: "Depois de anos usando aplicativos sem conseguir avançar, a María finalmente me fez falar. Suas aulas são organizadas e sempre divertidas. Tive minha primeira conversa de verdade em espanhol depois de apenas dois meses.", name: "Sarah T.", detail: "Do nível iniciante ao B1" },
-        { quote: "Passei na prova DELE B2 na primeira tentativa graças às explicações claras e à paciência da María. Ela sabe exatamente onde temos dificuldade e como ajudar.", name: "João P.", detail: "Preparação para o DELE B2" },
-        { quote: "A María adapta cada aula aos meus horários e objetivos. Agora faço minhas reuniões com clientes de Madri em espanhol, e eles percebem a diferença!", name: "Daniel K.", detail: "Espanhol para negócios" },
+        { quote: "Depois de anos usando aplicativos sem conseguir avançar, a Professora Teixeira finalmente me fez falar. Suas aulas são organizadas e sempre divertidas. Tive minha primeira conversa de verdade em espanhol depois de apenas dois meses.", name: "Sarah T.", detail: "Do nível iniciante ao B1" },
+        { quote: "Passei na prova DELE B2 na primeira tentativa graças às explicações claras e à paciência da Professora Teixeira. Ela sabe exatamente onde temos dificuldade e como ajudar.", name: "João P.", detail: "Preparação para o DELE B2" },
+        { quote: "A Professora Teixeira adapta cada aula aos meus horários e objetivos. Agora faço minhas reuniões com clientes de Madri em espanhol, e eles percebem a diferença!", name: "Daniel K.", detail: "Espanhol para negócios" },
       ],
     },
     contact: {
@@ -60,7 +61,7 @@ export const pt: Dictionary = {
       success: "Obrigada! Sua mensagem foi enviada. Entrarei em contato em breve.",
       errors: { name: "Informe seu nome.", email: "Informe um e-mail válido.", phone: "Este telefone é muito longo.", message: "Sua mensagem é muito longa (máximo de 2.000 caracteres)." },
     },
-    footer: { rights: (year) => `© ${year} Espanhol com María. Todos os direitos reservados.` },
+    footer: { rights: (year) => `© ${year} Espanhol com a Professora Teixeira. Todos os direitos reservados.` },
   },
   login: {
     title: "Bem-vindo de volta", subtitle: "Entre para agendar suas aulas.",
@@ -175,31 +176,31 @@ export const pt: Dictionary = {
   },
   emails: {
     newContact: {
-      subject: (name) => `Novo pedido de contato de ${name}`,
+      subject: (name) => `Novo aluno interessado: ${name} | Professora Teixeira`,
       body: (c) => `Alguém quer aprender espanhol com você!\n\nNome: ${c.name}\nE-mail: ${c.email}\nTelefone: ${c.phone || "-"}\n\nMensagem:\n${c.message || "-"}\n\nAbra a área da professora para criar a conta do aluno.`,
     },
     credentials: {
-      subject: "Sua conta de aulas de espanhol está pronta",
+      subject: "Boas-vindas! Ative sua conta de espanhol",
       body: (p) => `Olá, ${p.name}!\n\nBoas-vindas! Sua conta de aluno está pronta.\n\nAtive sua conta e escolha sua senha:\n${p.url}\n\nSeu e-mail de acesso: ${p.email}\n\nEste link tem prazo de validade e só pode ser usado uma vez. Depois, entre com seu e-mail e senha. Nunca compartilhe o link ou sua senha.\n\nAté breve!`,
     },
     passwordReset: {
-      subject: "Redefina sua senha das aulas de espanhol",
-      body: (p) => `Olá, ${p.name}!\n\nUse este link seguro para escolher uma nova senha:\n${p.url}\n\nEste link tem prazo de validade e só pode ser usado uma vez. Não o compartilhe. Se você não pediu esta alteração, ignore este e-mail.\n\nAté breve!`,
+      subject: "Seu link seguro para redefinir a senha | Professora Teixeira",
+      body: (p) => `${p.name ? `Olá, ${p.name}!` : "Olá!"}\n\nRecebemos um pedido para redefinir a senha da sua conta de aulas de espanhol.\n\nUse este link seguro para escolher uma nova senha:\n${p.url}\n\nEste link tem prazo de validade e só pode ser usado uma vez. Não o compartilhe. Se você não pediu esta alteração, ignore este e-mail: sua senha permanece a mesma.\n\nAté breve!`,
     },
     cancellation: {
-      subject: (when) => `Sua aula de espanhol de ${when} foi cancelada`,
-      body: (p) => `Olá, ${p.name}!\n\nSua aula de ${p.when} foi cancelada pela professora.\n\nMensagem da professora:\n"${p.message}"\n\nSeu crédito foi devolvido. Você pode agendar uma nova aula quando quiser.\n\nAté breve!`,
+      subject: (when) => `Aula cancelada: ${when} — crédito devolvido`,
+      body: (p) => `Olá, ${p.name}!\n\nSua aula de ${p.when} foi cancelada pela professora.\n\nMensagem da professora:\n"${p.message}"\n\n${p.refundedCredits === 0 ? teacherBookingText.giftCancellationBody : "Seu crédito foi devolvido. Você pode agendar uma nova aula quando quiser."}\n\nAté breve!`,
     },
     bookingConfirmation: {
-      subject: (when) => `Aula agendada: ${when}`,
+      subject: (when) => `Aula de espanhol confirmada: ${when}`,
       body: (p) => `Olá, ${p.name}!\n\nSua aula de espanhol de ${p.when} está agendada.\n\nAté breve!`,
     },
     teacherNewBooking: {
-      subject: (name, when) => `Nova aula: ${name} – ${when}`,
+      subject: (name, when) => `Nova aula agendada: ${name} — ${when}`,
       body: (p) => `${p.name} agendou uma aula para ${p.when}.`,
     },
     studentMessage: {
-      subject: (name) => `Nova mensagem de ${name}`,
+      subject: (name) => `Mensagem de ${name} | Aulas de espanhol`,
       body: (p) => `${p.name} (${p.email}) enviou uma mensagem:\n\n${p.message}`,
     },
   },

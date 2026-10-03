@@ -1,6 +1,6 @@
 /** Values that are not translated (names, emails). Texts live in src/lib/i18n. */
 export const siteConfig = {
-  teacherName: process.env.NEXT_PUBLIC_TEACHER_NAME || "María Fernández",
+  teacherName: process.env.NEXT_PUBLIC_TEACHER_NAME || "Professora Teixeira",
   teacherEmail: process.env.NEXT_PUBLIC_TEACHER_EMAIL || "teacher@example.com",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
 };

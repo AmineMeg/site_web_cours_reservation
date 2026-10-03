@@ -3,6 +3,8 @@ import { requireTeacher, getSettings } from "@/lib/auth";
 import { WorkCalendar, type CalendarDay } from "@/components/admin/WorkCalendar";
 import { WeeklyHoursEditor } from "@/components/admin/WeeklyHoursEditor";
 import { DaysOffCalendar } from "@/components/admin/DaysOffCalendar";
+import { AddLessonButton, type BookingStudent } from "@/components/admin/AddLessonButton";
+import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 import { PageTitle } from "@/components/ui/Notice";
 import {
   addDaysKey,
@@ -22,7 +24,7 @@ type View = "lessons" | "hours" | "daysoff";
 export default async function SchedulePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; w?: string }>;
+  searchParams: Promise<{ view?: string; w?: string; student?: string }>;
 }) {
   const params = await searchParams;
   const view: View = params.view === "hours" || params.view === "daysoff" ? params.view : "lessons";
@@ -31,6 +33,14 @@ export default async function SchedulePage({
   const tz = settings.timezone;
   const today = todayKey(tz);
   const s = t.admin.schedule;
+  const { data: studentData, error: studentError } = await supabase.from("profiles")
+    .select("id,full_name,email,credits").eq("role", "student").eq("is_active", true).order("full_name");
+  if (studentError) {
+    console.error("[admin] Booking students unavailable", studentError.code);
+    throw new Error(tb.loadError);
+  }
+  const students: BookingStudent[] = studentData ?? [];
+  const initialStudentId = students.some((student) => student.id === params.student) ? params.student : undefined;
 
   const tabs: { id: View; label: string; icon: string }[] = [
     { id: "lessons", label: s.tabs.lessons, icon: "👩‍🏫" },
@@ -65,6 +75,7 @@ export default async function SchedulePage({
           .filter((b) => dayKeyOf(b.starts_at, tz) === key)
           .map((b) => ({
             id: b.id,
+            creditsUsed: b.credits_used,
             timeLabel: `${formatTime(b.starts_at, tz)} – ${formatTime(b.ends_at, tz)}`,
             whenLabel: formatDateTime(b.starts_at, tz),
             student: b.student,
@@ -110,6 +121,9 @@ export default async function SchedulePage({
   return (
     <>
       <PageTitle title={s.title} intro={t.common.timezoneNote(tz)} />
+      <div className="mb-6">
+        <AddLessonButton students={students} today={today} timezone={tz} lessonMinutes={settings.lesson_minutes} initialStudentId={initialStudentId} />
+      </div>
       <nav className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {tabs.map((tab) => (
           <Link

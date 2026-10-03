@@ -27,7 +27,7 @@ test("Brazilian dictionary covers every core key and all homepage migration text
   assert.equal(t.locale, "pt-BR");
   assert.equal(defaultSettings.timezone, tz);
   assert.deepEqual(parseHomepageContent(migratedContent), migratedContent);
-  assert.deepEqual(migratedContent, { ...homepageDefaults, teacherName: "María Fernández" });
+  assert.deepEqual(migratedContent, { ...homepageDefaults, teacherName: "Professora Teixeira" });
   assert.match(t.emails.credentials.body({ name: "Ana", email: "ana@test.com", url: "https://example.com" }), /Olá, Ana/);
   assert.match(t.common.timezoneNote(tz), /Belo Horizonte/);
 });
@@ -101,5 +101,21 @@ test("localization migration replaces stored homepage, changes timezone and pres
     assert.equal((await one("select is_slot_available($1) available", [future.slot])).available, true);
     await db.query("select book_lesson($1)", [future.slot]);
     assert.equal((await one("select credits from profiles where id=$1", [student])).credits, 0);
+    await db.exec("reset role");
+    const oldContent = {
+      ...migratedContent, siteName: "Espanhol com María", teacherName: "María Fernández",
+      aboutParagraph1: "Olá! Sou a María.", heroTitle: "Meu título personalizado",
+    };
+    await db.query("update website_content set content=$1 where id='home'", [JSON.stringify(oldContent)]);
+    const renameSql = fs.readFileSync(path.join(root, "supabase/professora-teixeira.sql"), "utf8");
+    await db.exec(renameSql);
+    const renamed = await one("select content,revision from website_content");
+    assert.equal(renamed.content.siteName, "Espanhol com a Professora Teixeira");
+    assert.equal(renamed.content.teacherName, "Professora Teixeira");
+    assert.equal(renamed.content.aboutParagraph1, "Olá! Sou a Professora Teixeira.");
+    assert.equal(renamed.content.heroTitle, oldContent.heroTitle);
+    assert.equal(renamed.revision, 9);
+    await db.exec(renameSql);
+    assert.deepEqual(await one("select content,revision from website_content"), renamed);
   } finally { await db.close(); }
 });

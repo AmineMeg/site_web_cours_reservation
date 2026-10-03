@@ -1,21 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { readFileSync } = require("node:fs");
-const path = require("node:path");
-const Module = require("node:module");
-const ts = require("typescript");
-
-function load(relative) {
-  const filename = path.resolve(__dirname, "..", relative);
-  const output = ts.transpileModule(readFileSync(filename, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText;
-  const compiled = new Module(filename, module);
-  compiled.filename = filename;
-  compiled.paths = Module._nodeModulePaths(path.dirname(filename));
-  compiled._compile(output, filename);
-  return compiled.exports;
-}
+const { load } = require("./load-typescript.cjs");
 
 const { passwordProblem } = load("src/lib/password-policy.ts");
 const { signPasswordFlow, verifyPasswordFlow } = load("src/lib/auth-flow-proof.ts");

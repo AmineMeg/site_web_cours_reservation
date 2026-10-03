@@ -1,6 +1,7 @@
 import "server-only";
 import { sendEmail } from "@/lib/email";
 import { securityText as s } from "@/lib/i18n/security";
+import { emailText as e } from "@/lib/i18n/email";
 
 export type SecurityAlert = keyof typeof s.alerts;
 
@@ -8,7 +9,10 @@ export type SecurityAlert = keyof typeof s.alerts;
 export async function sendSecurityAlert(email: string | undefined, alert: SecurityAlert): Promise<void> {
   if (!email) return;
   try {
-    const result = await sendEmail({ to: email, subject: s.alertSubject, text: s.alertBody(s.alerts[alert]) });
+    const result = await sendEmail({
+      to: email, subject: s.alertSubject, text: s.alertBody(s.alerts[alert]),
+      presentation: { title: e.security, preview: e.securityPreview },
+    });
     if (!result.ok) console.error("[security] Security alert not delivered", alert);
   } catch {
     console.error("[security] Security alert failed", alert);

@@ -338,8 +338,8 @@ export const en = {
     },
     cancellation: {
       subject: (when: string) => `Your Spanish lesson on ${when} is cancelled`,
-      body: (p: { name: string; when: string; message: string }) =>
-        `Hello ${p.name},\n\nYour lesson on ${p.when} has been cancelled by your teacher.\n\nMessage from your teacher:\n"${p.message}"\n\nYour lesson credit has been given back. You can book a new lesson at any time.\n\n¡Hasta pronto!`,
+      body: (p: { name: string; when: string; message: string; refundedCredits?: number }) =>
+        `Hello ${p.name},\n\nYour lesson on ${p.when} has been cancelled by your teacher.\n\nMessage from your teacher:\n"${p.message}"\n\n${p.refundedCredits === 0 ? "This lesson was offered, so no credit was used or refunded." : "Your lesson credit has been given back."} You can book a new lesson at any time.\n\n¡Hasta pronto!`,
     },
     bookingConfirmation: {
       subject: (when: string) => `Lesson booked: ${when}`,

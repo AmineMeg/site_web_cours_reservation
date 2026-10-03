@@ -2,24 +2,8 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const Module = require("node:module");
-const ts = require("typescript");
 const root = path.resolve(__dirname, "..");
-function load(relative) {
-  const filename = path.join(root, relative);
-  const compiled = new Module(filename, module);
-  compiled.filename = filename;
-  compiled.paths = Module._nodeModulePaths(path.dirname(filename));
-  compiled.require = (name) => {
-    if (name === "@/lib/i18n") return { t: load("src/lib/i18n/pt.ts").pt };
-    if (name === "@/lib/config") return load("src/lib/config.ts");
-    return require(name);
-  };
-  compiled._compile(ts.transpileModule(fs.readFileSync(filename, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, filename);
-  return compiled.exports;
-}
+const { load } = require("./load-typescript.cjs");
 const { homepageDefaults, parseHomepageContent, homepageSections, homepageFieldLimit } = load("src/lib/website-content.ts");
 
 test("every homepage field has an editor section and valid defaults", () => {

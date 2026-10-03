@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Notice } from "@/components/ui/Notice";
 import { buttonClass } from "@/components/ui/button";
 import { t } from "@/lib/i18n";
+import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 import type { ActionResult, StudentCard } from "@/lib/types";
 
 export interface LessonItem {
@@ -13,6 +14,7 @@ export interface LessonItem {
   timeLabel: string;
   whenLabel: string;
   student: StudentCard | null;
+  creditsUsed: number;
 }
 
 export function LessonModal({ lesson, onClose }: { lesson: LessonItem | null; onClose: () => void }) {
@@ -63,6 +65,7 @@ export function LessonModal({ lesson, onClose }: { lesson: LessonItem | null; on
             <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-stone-500">{m.objectives}</p>
             <p className="whitespace-pre-line text-lg">{student?.objectives || m.noObjectives}</p>
             {student && <p className="mt-3 text-stone-600">{t.common.credits(student.credits)}</p>}
+            <p className="mt-2 font-semibold">{lesson.creditsUsed === 0 ? tb.giftLabel : tb.creditLabel}</p>
           </section>
           <button type="button" onClick={() => setStep("confirm")} className={buttonClass("danger", "xl", "w-full")}>
             ❌ {m.cancelClass}
@@ -71,7 +74,7 @@ export function LessonModal({ lesson, onClose }: { lesson: LessonItem | null; on
       ) : lesson ? (
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-red-700">{m.cancelTitle}</h3>
-          <p className="text-lg text-stone-700">{m.cancelHelp}</p>
+          <p className="text-lg text-stone-700">{lesson.creditsUsed === 0 ? tb.cancelGiftHelp : m.cancelHelp}</p>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -79,7 +82,7 @@ export function LessonModal({ lesson, onClose }: { lesson: LessonItem | null; on
             maxLength={2000}
             placeholder={m.cancelPlaceholder}
             className="input"
-            aria-label={m.cancelHelp}
+            aria-label={lesson.creditsUsed === 0 ? tb.cancelGiftHelp : m.cancelHelp}
             autoFocus
           />
           {result && !result.ok && <Notice ok={false}>{result.message}</Notice>}

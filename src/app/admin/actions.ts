@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireTeacher, requireRecentAuthentication, getSettings } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendCancellationNotice, sendPasswordReset, sendStudentInvitation } from "@/lib/notifications";
+import { sendBookingEmails, sendCancellationNotice, sendPasswordReset, sendStudentInvitation } from "@/lib/notifications";
 import { emailIsConfigured } from "@/lib/email";
 import { accountSiteUrl, confirmationLink, createAccountLink } from "@/lib/auth-links";
 import { accountText } from "@/lib/i18n/account";
@@ -12,6 +12,8 @@ import { verifyCurrentPassword } from "@/lib/verify-password";
 import { formatDateTime, timeToMinutes, weekdayNames } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { ActionResult, Contact, Profile, WeeklyAvailability } from "@/lib/types";
+import { validTeacherBooking, type TeacherBookingInput } from "@/lib/teacher-booking";
+import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^\d{2}:\d{2}(:\d{2})?$/;
@@ -191,7 +193,41 @@ export async function resetStudentPassword(studentId: string): Promise<ActionRes
 // Tab 3 – Schedule
 // ---------------------------------------------------------------------------
 
-/** Cancels a lesson, refunds 1 credit (in the DB function) and emails the student. */
+export async function addTeacherLesson(input: TeacherBookingInput): Promise<ActionResult> {
+  const { supabase } = await requireTeacher();
+  if (!validTeacherBooking(input)) return fail(tb.invalid);
+  const { data: student, error: studentError } = await supabase.from("profiles")
+    .select("full_name,email").eq("id", input.studentId).eq("role", "student").eq("is_active", true).maybeSingle();
+  if (studentError) {
+    console.error("[admin] Teacher booking student lookup failed", studentError.code);
+    return fail(tb.error);
+  }
+  if (!student) return fail(tb.inactive);
+  const { data, error } = await supabase.rpc("teacher_book_lesson", {
+    p_student_id: input.studentId, p_day: input.day, p_time: input.time,
+    p_use_credit: input.useCredit, p_exceptional: input.exceptional, p_request_id: input.requestId,
+  }).single<{ booking_id: string; starts_at: string; credits_used: number; created: boolean }>();
+  if (error || !data) {
+    const errors: Record<string, string> = {
+      NO_CREDITS: tb.noCredits, SLOT_NOT_AVAILABLE: tb.unavailable, INVALID_BOOKING: tb.invalid,
+      STUDENT_NOT_ACTIVE: tb.inactive, REQUEST_CONFLICT: tb.conflict,
+    };
+    const code = Object.keys(errors).find((key) => error?.message.includes(key));
+    if (!code) console.error("[admin] Teacher booking failed", error?.code);
+    return fail(code ? errors[code] : tb.error);
+  }
+  revalidatePath("/admin", "layout");
+  revalidatePath("/dashboard", "layout");
+  if (!data.created) return { ok: true, message: tb.alreadySaved };
+  const settings = await getSettings(supabase);
+  const delivery = await sendBookingEmails({
+    name: student.full_name, email: student.email, when: formatDateTime(data.starts_at, settings.timezone),
+    creditsUsed: data.credits_used,
+  });
+  return { ok: true, message: delivery.ok ? tb.saved : tb.savedWithoutEmail };
+}
+
+/** Refunds only the credit actually used and emails the student. */
 export async function cancelLesson(bookingId: string, message: string): Promise<ActionResult> {
   const { supabase } = await requireTeacher();
   const text = message.trim();
@@ -203,7 +239,7 @@ export async function cancelLesson(bookingId: string, message: string): Promise<
     return fail();
   }
 
-  const booking = data as { student_id: string; starts_at: string };
+  const booking = data as { student_id: string; starts_at: string; credits_used: number };
   const [{ data: student }, settings] = await Promise.all([
     supabase.from("profiles").select("full_name, email").eq("id", booking.student_id).maybeSingle(),
     getSettings(supabase),
@@ -216,12 +252,16 @@ export async function cancelLesson(bookingId: string, message: string): Promise<
       email: student.email,
       when: formatDateTime(booking.starts_at, settings.timezone),
       message: text,
+      refundedCredits: booking.credits_used,
     });
     delivered = delivery.ok;
   }
 
   revalidatePath("/admin", "layout");
-  return { ok: true, message: delivered ? t.admin.lessonModal.cancelled : accountText.cancelledWithoutEmail };
+  revalidatePath("/dashboard", "layout");
+  return { ok: true, message: delivered
+    ? booking.credits_used === 0 ? tb.cancelledGift : t.admin.lessonModal.cancelled
+    : tb.cancelledWithoutEmail };
 }
 
 export async function saveWeeklyHours(rows: WeeklyAvailability[]): Promise<ActionResult> {

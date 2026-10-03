@@ -3,6 +3,7 @@ import { BookingCalendar } from "@/components/dashboard/BookingCalendar";
 import { generateAvailableSlots, type BusyRange } from "@/lib/slots";
 import { addDaysKey, formatDateTime, localToUtc, todayKey } from "@/lib/dates";
 import { t } from "@/lib/i18n";
+import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 import type { BlockedSlot, Booking, WeeklyAvailability } from "@/lib/types";
 
 export default async function BookingPage() {
@@ -71,6 +72,7 @@ export default async function BookingPage() {
                     {lesson.cancel_message ? ` — “${lesson.cancel_message}”` : ""}
                   </p>
                 )}
+                {lesson.credits_used === 0 && <p className="mt-1 text-base">{tb.giftLabel}</p>}
               </li>
             ))}
           </ul>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { LessonModal, type LessonItem } from "@/components/admin/LessonModal";
 import { buttonClass } from "@/components/ui/button";
 import { t } from "@/lib/i18n";
+import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 
 export interface CalendarDay {
   key: string;
@@ -67,6 +68,7 @@ export function WorkCalendar({
                     >
                       <span className="block text-lg font-bold">{lesson.timeLabel}</span>
                       <span className="block truncate">{lesson.student?.full_name || lesson.student?.email}</span>
+                      {lesson.creditsUsed === 0 && <span className="block text-sm">{tb.giftLabel}</span>}
                     </button>
                   </li>
                 ))}

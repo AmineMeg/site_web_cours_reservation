@@ -46,7 +46,7 @@ src/
    ├─ supabase/          ← server client (user session) / admin client (service role, server only)
    ├─ auth.ts            ← getCurrentProfile, requireTeacher, requireStudent, getSettings
    ├─ slots.ts dates.ts  ← Slot generation & timezone helpers
-   ├─ email.ts           ← sendEmail(): Resend → webhook → console log (placeholder)
+   ├─ email.ts           ← sendEmail(): Resend → webhook → explicit delivery failure
    └─ notifications.ts   ← Email templates (new contact, credentials, cancellation, message)
 ```
 
@@ -95,11 +95,30 @@ and minimum notice (12 h) are in the `app_settings` table.
 `src/lib/email.ts` is the single place that sends emails:
 
 - `RESEND_API_KEY` set → sent with [Resend](https://resend.com) (free tier, 3 000 emails/month).
-- else `EMAIL_WEBHOOK_URL` set → JSON `{to, subject, text, replyTo}` is POSTed (Zapier, Make, n8n…).
+- else `EMAIL_WEBHOOK_URL` set → JSON `{to, subject, text, html, replyTo}` is POSTed (Zapier, Make, n8n…).
 - else → delivery fails explicitly. Passwords, activation links and email contents are not printed in logs.
 
 Resend's `onboarding@resend.dev` sender only delivers test emails to the Resend account
 owner. To send to students, verify a domain and set `EMAIL_FROM` to an address on it.
+
+All application emails include Brazilian Portuguese subjects, a mobile-friendly
+HTML layout and a plain-text alternative. Invitations and password resets include
+secure action buttons; booking/contact messages link to the appropriate account
+area. User-provided names and messages are escaped, never interpreted as HTML.
+Booking and cancellation emails highlight the lesson time and credit/refund status
+in structured cards. Table-based buttons and an Outlook width fallback keep the
+layout usable in email clients without external images or stylesheets.
+The shared design is in `src/lib/email-template.ts`; labels are in
+`src/lib/i18n/email.ts`. No SQL migration is needed for email styling.
+
+In Vercel, update the display name of your existing `EMAIL_FROM` to
+`Professora Teixeira <your-verified-address@your-domain>` while keeping your verified
+sending address. Environment variables already saved in Vercel are not changed by
+`.env.example`. A webhook integration must map the new `html` field to its email
+provider's HTML body; older integrations can continue to use `text`.
+Ensure `NEXT_PUBLIC_SITE_URL` is the HTTPS production origin for account buttons.
+Custom Supabase Auth templates (for emails sent directly by Supabase rather than
+this application's Resend/webhook sender) are managed separately in Supabase.
 
 ## Account security rollout (existing production projects)
 
@@ -232,7 +251,16 @@ It updates both the timezone default and the existing settings row and **replace
 all homepage text with the Portuguese version**, as requested. Back up
 `website_content` first. Its revision increases so already-open editors cannot
 overwrite it. Do not rerun it after customizing the translated homepage.
-The placeholder teacher name is María Fernández; adjust it in the homepage editor.
+The teacher name is Professora Teixeira; adjust it in the homepage editor.
+
+For a homepage already saved with the old María name, run
+[`supabase/professora-teixeira.sql`](supabase/professora-teixeira.sql) instead of
+rerunning the full Portuguese migration. It replaces the old name in saved homepage
+strings while preserving other text and increasing the revision only when changed.
+Update `NEXT_PUBLIC_TEACHER_NAME=Professora Teixeira` in Vercel as well;
+existing environment values override the code default. Keep the verified address
+in `EMAIL_FROM`, changing only its display name to `Professora Teixeira`.
+This branding change does not rename Auth accounts or rewrite blog articles.
 
 Belo Horizonte uses `America/Sao_Paulo` (currently Brasília time, UTC−3).
 Weekly hours and date/time blocks keep their local clock values and are interpreted
@@ -275,6 +303,29 @@ Open **Blog** in the teacher sidebar to create and edit articles. Drafts stay pr
 only published articles appear at `/blog`. Review the article before publishing.
 Images use Supabase Storage; configure the bucket and policies by running the blog
 migration rather than manually opening storage uploads to the public.
+
+### Teacher-created lessons
+
+Run [`supabase/teacher-booking.sql`](supabase/teacher-booking.sql) **last**, after the
+base, security and student-login scripts, before deploying this feature. Reapply
+it last if you rerun the older security/base scripts: it replaces cancellation
+logic so a free lesson never creates a refunded credit. Existing lessons retain
+their original one-credit cost.
+
+In **Minha agenda** or an active student's profile, select **Adicionar aula**.
+Choose a student, local date/time and either **Usar 1 crédito do aluno** or
+**Oferecer esta aula**. The normal mode uses the same availability and notice
+rules as student booking. **Usar um horário excepcional** explicitly bypasses
+weekly hours, blocked dates, minimum notice and booking window, but never permits
+past starts, a lesson crossing local midnight or overlap with another booked lesson.
+Duration is the configured lesson length; times use the teacher's timezone.
+
+Teacher-created lessons appear in both agendas and use the existing confirmation
+emails. A delivery failure is shown as “booked, email not sent”; do not book again.
+Database locking serializes teacher and student bookings, credit use is atomic,
+and retries of the same request do not consume another credit or send another email.
+Gifted lessons are labelled **Aula oferecida**. Cancelling one changes no credits;
+cancelling a charged lesson refunds exactly the credit used, only once.
 
 The visual editor supports headings, bold/italic text, lists and uploaded images.
 Its formatting toolbar stays visible while scrolling through the article.
