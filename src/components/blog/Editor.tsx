@@ -88,7 +88,7 @@ export function BlogEditor({ post, imageOrigin }: { post?: BlogPost; imageOrigin
     startTransition(async () => {
       try {
         const normalizedDocument = validateDocument(editor?.getJSON() ?? document, imageOrigin);
-        const result = await saveBlogPost({ id, updatedAt, title, slug, excerpt, document: normalizedDocument, cover_image: cover, status: nextStatus });
+        const result = await saveBlogPost({ id, updatedAt, title, slug, excerpt, document: JSON.stringify(normalizedDocument), cover_image: cover, status: nextStatus });
         if (result.error) { fail(result.error); return; }
         setId(result.id); setUpdatedAt(result.updatedAt); setStatus(nextStatus); setDirty(false);
         setIsError(false); setMessage(nextStatus === "published" ? "Article published. Your readers can see it now." : "Draft saved. It is not visible to readers.");
@@ -146,8 +146,8 @@ export function BlogEditor({ post, imageOrigin }: { post?: BlogPost; imageOrigin
       <label className="block text-xl font-bold">URL name<input className={field} maxLength={100} value={slug} disabled={!!id || busy} onChange={(event) => { setSlug(event.target.value); setSlugEdited(true); setDirty(true); }} placeholder="my-spanish-tip" /><span className="mt-2 block text-base font-normal text-stone-500">{t.slugHelp} /blog/{slug || "your-url-name"}</span></label>
       <label className="block text-xl font-bold">Short summary<textarea className={field} rows={3} maxLength={400} value={excerpt} onChange={(event) => { setExcerpt(event.target.value); setDirty(true); }} placeholder="A sentence or two to invite readers in." /></label>
       <section><h2 className="mb-3 text-xl font-bold">Cover image (optional)</h2>{cover && <img src={cover} alt="Cover preview" className="mb-4 max-h-64 rounded-xl" />}<div className="flex flex-wrap gap-3"><button type="button" className={button} onClick={() => pickImage("cover")}>{cover ? "Change cover image" : "Add cover image"}</button>{cover && <button type="button" className={button} onClick={() => { setCover(null); setDirty(true); }}>Remove cover</button>}</div></section>
-      <section><h2 className="mb-3 text-xl font-bold">Article content</h2><div className="overflow-hidden rounded-2xl border border-stone-300 bg-white">
-        <div role="group" aria-label="Text formatting" className="flex flex-wrap gap-2 border-b bg-stone-50 p-3">
+      <section><h2 className="mb-3 text-xl font-bold">Article content</h2><div className="rounded-2xl border border-stone-300 bg-white">
+        <div role="group" aria-label="Text formatting" className="sticky top-0 z-30 flex max-h-[40vh] flex-wrap gap-2 overflow-y-auto rounded-t-2xl border-b bg-stone-50 p-3 shadow-sm">
           {tool("Paragraph", !active?.heading2 && !active?.heading3, () => { editor?.chain().focus().setParagraph().run(); })}
           {tool("Heading", active?.heading2, () => { editor?.chain().focus().toggleHeading({ level: 2 }).run(); })}
           {tool("Subheading", active?.heading3, () => { editor?.chain().focus().toggleHeading({ level: 3 }).run(); })}

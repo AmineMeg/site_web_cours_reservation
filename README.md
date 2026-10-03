@@ -237,6 +237,7 @@ Images use Supabase Storage; configure the bucket and policies by running the bl
 migration rather than manually opening storage uploads to the public.
 
 The visual editor supports headings, bold/italic text, lists and uploaded images.
+Its formatting toolbar stays visible while scrolling through the article.
 Articles can be saved as drafts, previewed privately, published, unpublished or
 deleted with confirmation. Their address stays fixed after creation; concurrent
 edits report a conflict rather than silently overwriting a newer version.

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireTeacher } from "@/lib/auth";
 import { supabaseUrl } from "@/lib/supabase/env";
-import { validatePost } from "@/lib/blog/validation";
+import { MAX_DOCUMENT_BYTES, validatePost } from "@/lib/blog/validation";
 
 export type BlogActionResult = { error?: string; id?: string; updatedAt?: string };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -15,7 +15,17 @@ export async function saveBlogPost(input: {
 }): Promise<BlogActionResult> {
   const { supabase } = await requireTeacher();
   let post;
-  try { post = validatePost(input, supabaseUrl()); }
+  try {
+    let document = input.document;
+    // A JSON string avoids React Flight temporary references for editor attributes.
+    if (typeof document === "string") {
+      if (new TextEncoder().encode(document).length > MAX_DOCUMENT_BYTES) {
+        return { error: "Article is too large (maximum 200 KB)." };
+      }
+      document = JSON.parse(document);
+    }
+    post = validatePost({ ...input, document }, supabaseUrl());
+  }
   catch (error) { return { error: error instanceof Error ? error.message : "Invalid article." }; }
   if (input.id && (!uuid.test(input.id) || !input.updatedAt)) return { error: "Invalid article." };
   const id = input.id ?? randomUUID();

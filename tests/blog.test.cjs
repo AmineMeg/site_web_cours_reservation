@@ -70,6 +70,13 @@ test("real Tiptap heading JSON stays compatible with blog validation", () => {
   }
 });
 
+test("formatting toolbar stays sticky without an overflow-clipping editor ancestor", () => {
+  const source = readFileSync(path.resolve(__dirname, "../src/components/blog/Editor.tsx"), "utf8");
+  assert.match(source, /aria-label="Text formatting" className="sticky top-0 z-30/);
+  assert.match(source, /max-h-\[40vh\]/);
+  assert.doesNotMatch(source, /Article content<\/h2><div className="overflow-hidden/);
+});
+
 test("blog validates image origin, path, protocol and exact URL", () => {
   assert.equal(validImageUrl(image, origin), true);
   for (const url of [
@@ -150,6 +157,25 @@ test("blog mutations require teacher MFA before validation or database access", 
   await assert.rejects(actions.saveBlogPost({}), /MFA required/);
   await assert.rejects(actions.deleteBlogPost("invalid", ""), /MFA required/);
   assert.equal(attempts, 2);
+});
+
+test("blog server action decodes heading JSON across the Flight boundary and rejects malformed payloads", async () => {
+  let inserted;
+  const query = {
+    insert(value) { inserted = value; return this; },
+    select() { return this; },
+    async maybeSingle() { return { data: { updated_at: "2026-10-03T14:00:00Z" }, error: null }; },
+  };
+  const actions = actionModule(async () => ({ supabase: { from() { return query; } } }));
+  const document = { type: "doc", content: [{ type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Subtitle" }] }] };
+  const input = { title: "Example", slug: "example", excerpt: "", document: JSON.stringify(document), cover_image: null, status: "published" };
+  assert.ok((await actions.saveBlogPost(input)).id);
+  assert.deepEqual(inserted.document, document);
+  assert.ok((await actions.saveBlogPost({ ...input, document: "{" })).error);
+  assert.ok((await actions.saveBlogPost({ ...input, document: JSON.stringify({ type: "doc", content: [{ type: "heading", attrs: "$T" }] }) })).error);
+  assert.ok((await actions.saveBlogPost({ ...input, document: " ".repeat(200_001) })).error);
+  const editorSource = readFileSync(path.resolve(__dirname, "../src/components/blog/Editor.tsx"), "utf8");
+  assert.match(editorSource, /document: JSON\.stringify\(normalizedDocument\)/);
 });
 
 test("blog action handles URL conflicts and stale writes with friendly errors", async () => {
