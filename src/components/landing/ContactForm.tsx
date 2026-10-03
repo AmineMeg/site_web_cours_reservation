@@ -61,7 +61,7 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
       </div>
       {/* Honeypot field, hidden from humans */}
       <div aria-hidden className="absolute -left-[9999px]">
-        <label htmlFor="company">Company</label>
+        <label htmlFor="company">{t.landing.contact.company}</label>
         <input id="company" name="company" tabIndex={-1} autoComplete="off" />
       </div>
       {state.status === "error" && !state.errors && <Notice ok={false}>{state.message}</Notice>}

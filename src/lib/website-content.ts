@@ -4,7 +4,7 @@ import { siteConfig } from "@/lib/config";
 export const homepageDefaults = {
   siteName: t.common.appName,
   teacherName: siteConfig.teacherName,
-  footerText: `${t.common.appName}. All rights reserved.`,
+  footerText: t.common.footerText,
   heroBadge: t.landing.hero.badge,
   heroTitle: t.landing.hero.title,
   heroSubtitle: t.landing.hero.subtitle,

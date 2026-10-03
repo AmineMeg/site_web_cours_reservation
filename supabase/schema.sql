@@ -29,7 +29,7 @@ exception when duplicate_object then null; end $$;
 -- Global settings (single row). The teacher's hours are interpreted in `timezone`.
 create table if not exists public.app_settings (
   id                  int primary key default 1 check (id = 1),
-  timezone            text not null default 'Europe/Lisbon',
+  timezone            text not null default 'America/Sao_Paulo',
   lesson_minutes      int  not null default 60 check (lesson_minutes between 15 and 240),
   booking_window_days int  not null default 28 check (booking_window_days between 1 and 180),
   min_notice_hours    int  not null default 12 check (min_notice_hours between 0 and 168)

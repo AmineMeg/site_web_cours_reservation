@@ -79,7 +79,7 @@ async function makeUser(email, { teacher = false, factor = true } = {}) {
 }
 
 const slot = async (days, hm) => (await one(
-  `select ((date_trunc('day', now() at time zone 'Europe/Lisbon') + interval '${days} days ${hm}') at time zone 'Europe/Lisbon') ts`)).ts.toISOString();
+  `select ((date_trunc('day', now() at time zone 'America/Sao_Paulo') + interval '${days} days ${hm}') at time zone 'America/Sao_Paulo') ts`)).ts.toISOString();
 
 let ready;
 const setup = () => (ready ??= (async () => {
@@ -103,6 +103,8 @@ test("schema.sql and security.sql are idempotent and produce the same database",
   }
   const fromSchema = await freshDb(schemaSql);
   const migrated = await freshDb(head, securitySql, securitySql);
+  // Timezone rollout is separate from the security upgrade; align that default.
+  await migrated.exec("alter table public.app_settings alter column timezone set default 'America/Sao_Paulo'");
   const [a, b] = [await snapshot(fromSchema), await snapshot(migrated)];
   for (const key of Object.keys(a)) assert.equal(b[key], a[key], `drift in ${key}`);
 });

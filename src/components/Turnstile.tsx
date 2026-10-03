@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { accountText } from "@/lib/i18n/account";
 
 interface TurnstileApi {
-  render(container: HTMLElement, options: { sitekey: string; action: string; "error-callback": () => void }): string;
+  render(container: HTMLElement, options: { sitekey: string; action: string; language: string; "error-callback": () => void }): string;
   remove(widgetId: string): void;
 }
 
@@ -23,6 +23,7 @@ export function Turnstile({ action }: { action: "login" | "reset" }) {
       widget.current = window.turnstile.render(container.current, {
         sitekey: siteKey,
         action,
+        language: "pt-br",
         "error-callback": () => setFailed(true),
       });
     }

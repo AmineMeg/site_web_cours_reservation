@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang={t.locale.slice(0, 2)}>
+    <html lang={t.locale}>
       <body>{children}</body>
     </html>
   );

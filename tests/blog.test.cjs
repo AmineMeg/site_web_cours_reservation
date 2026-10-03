@@ -4,13 +4,9 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const Module = require("node:module");
 const ts = require("typescript");
-const filename = path.resolve(__dirname, "../src/lib/blog/validation.ts");
-const compiled = new Module(filename, module);
-compiled.filename = filename;
-compiled.paths = Module._nodeModulePaths(path.dirname(filename));
-compiled._compile(ts.transpileModule(readFileSync(filename, "utf8"), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, filename);
+const { load } = require("./load-typescript.cjs");
+const { blogText } = load("src/lib/i18n/blog.ts");
+const compiled = { exports: load("src/lib/blog/validation.ts") };
 const { validateDocument, validatePost, validImageUrl, imageType, slugify, MAX_IMAGE_BYTES } = compiled.exports;
 const origin = "https://example.supabase.co";
 const image = `${origin}/storage/v1/object/public/blog-images/12345678-1234-4123-8123-123456789abc.png`;
@@ -72,9 +68,9 @@ test("real Tiptap heading JSON stays compatible with blog validation", () => {
 
 test("formatting toolbar stays sticky without an overflow-clipping editor ancestor", () => {
   const source = readFileSync(path.resolve(__dirname, "../src/components/blog/Editor.tsx"), "utf8");
-  assert.match(source, /aria-label="Text formatting" className="sticky top-0 z-30/);
+  assert.match(source, /aria-label=\{t.formatting\} className="sticky top-0 z-30/);
   assert.match(source, /max-h-\[40vh\]/);
-  assert.doesNotMatch(source, /Article content<\/h2><div className="overflow-hidden/);
+  assert.doesNotMatch(source, /\{t.content\}<\/h2><div className="overflow-hidden/);
 });
 
 test("blog validates image origin, path, protocol and exact URL", () => {
@@ -142,6 +138,7 @@ function actionModule(requireTeacher) {
     if (name === "@/lib/auth") return { requireTeacher };
     if (name === "@/lib/supabase/env") return { supabaseUrl: () => origin };
     if (name === "@/lib/blog/validation") return compiled.exports;
+    if (name === "@/lib/i18n/blog") return { blogText };
     if (name === "next/cache") return { revalidatePath() {} };
     return baseRequire(name);
   };
@@ -187,15 +184,15 @@ test("blog action handles URL conflicts and stale writes with friendly errors", 
   };
   const actions = actionModule(async () => ({ supabase: { from: () => query } }));
   const input = { title: "Article", slug: "article", excerpt: "", document: doc, status: "draft", cover_image: null };
-  assert.match((await actions.saveBlogPost(input)).error, /already used/);
+  assert.equal((await actions.saveBlogPost(input)).error, blogText.errors.slugTaken);
   let reads = 0;
   query.maybeSingle = async () => ++reads === 1 ? { data: { slug: "article" } } : { data: null };
   const updatedAt = "2026-10-03T12:00:00Z";
   const result = await actions.saveBlogPost({ ...input, id: "12345678-1234-4123-8123-123456789abc", updatedAt });
-  assert.match(result.error, /Reload/);
+  assert.equal(result.error, blogText.errors.conflict);
   assert.ok(filters.some(([key, value]) => key === "updated_at" && value === updatedAt));
   query.maybeSingle = async () => ({ data: { slug: "original" } });
-  assert.match((await actions.saveBlogPost({ ...input, id: "12345678-1234-4123-8123-123456789abc", updatedAt })).error, /cannot change/);
+  assert.equal((await actions.saveBlogPost({ ...input, id: "12345678-1234-4123-8123-123456789abc", updatedAt })).error, blogText.errors.slugImmutable);
 });
 
 test("blog renderer escapes text rather than interpreting HTML", () => {
@@ -223,6 +220,7 @@ function uploadModule(requireTeacher) {
   loaded.require = (name) => {
     if (name === "@/lib/auth") return { requireTeacher };
     if (name === "@/lib/blog/validation") return compiled.exports;
+    if (name === "@/lib/i18n/blog") return { blogText };
     return baseRequire(name);
   };
   loaded._compile(ts.transpileModule(readFileSync(routeFile, "utf8"), {

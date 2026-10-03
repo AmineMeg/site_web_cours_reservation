@@ -48,7 +48,7 @@ test("booking, credits, contacts and RLS rules hold with password-only students"
   await db.exec("update public.weekly_availability set is_active = true, start_time = '09:00', end_time = '17:00'");
 
   const slot = async (days, hm) => (await one(
-    `select ((date_trunc('day', now() at time zone 'Europe/Lisbon') + interval '${days} days ${hm}') at time zone 'Europe/Lisbon') ts`)).ts.toISOString();
+    `select ((date_trunc('day', now() at time zone 'America/Sao_Paulo') + interval '${days} days ${hm}') at time zone 'America/Sao_Paulo') ts`)).ts.toISOString();
   const s10 = await slot(2, "10:00"), s1030 = await slot(2, "10:30"), s11 = await slot(2, "11:00");
   const s16 = await slot(2, "16:00"), s1630 = await slot(2, "16:30"), d3 = await slot(3, "10:00"), far = await slot(60, "10:00");
   const avail = async (ts) => (await one("select public.is_slot_available($1) a", [ts])).a;
@@ -94,7 +94,7 @@ test("booking, credits, contacts and RLS rules hold with password-only students"
 
   await t.test("teacher blocks a day and cancels with refund", async () => {
     await signIn(teacher);
-    await db.query("insert into public.blocked_slots (day) values ((($1::timestamptz) at time zone 'Europe/Lisbon')::date)", [d3]);
+    await db.query("insert into public.blocked_slots (day) values ((($1::timestamptz) at time zone 'America/Sao_Paulo')::date)", [d3]);
     await db.query("select public.adjust_credits($1, 1)", [student]);
     const cancelled = await one("select * from public.cancel_lesson($1, 'Sick')", [b1.id]);
     assert.ok(cancelled.status === "cancelled" && cancelled.cancel_message === "Sick");

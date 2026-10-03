@@ -10,6 +10,7 @@ export const en = {
 
   common: {
     appName: "Spanish with María",
+    footerText: "Spanish with María. All rights reserved.",
     save: "Save",
     saving: "Saving…",
     cancel: "Cancel",
@@ -17,6 +18,10 @@ export const en = {
     back: "Back",
     signOut: "Sign out",
     error: "Something went wrong. Please try again.",
+    notFound: "Page not found",
+    notFoundHelp: "This page does not exist or is no longer available.",
+    home: "Back to the website",
+    retry: "Try again",
     notAllowed: "You are not allowed to do this.",
     credits: (n: number) => `${n} ${plural(n, "credit", "credits")}`,
     timezoneNote: (tz: string) => `All times are shown in ${tz.replace(/_/g, " ")} time.`,
@@ -83,6 +88,7 @@ export const en = {
     },
     contact: {
       title: "Contact us to start learning",
+      company: "Company",
       subtitle:
         "Tell me a little about yourself and your goals. I will get back to you within 48 hours to plan your first lesson.",
       name: "Your name",

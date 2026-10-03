@@ -1,9 +1,6 @@
-import { en, type Dictionary } from "./en";
+import type { Dictionary } from "./en";
+import { pt } from "./pt";
 
-// To add Portuguese: create ./pt.ts exporting `pt: Dictionary`, add it here,
-// and set NEXT_PUBLIC_LOCALE=pt.
-const dictionaries: Record<string, Dictionary> = { en };
-
-export const t: Dictionary = dictionaries[process.env.NEXT_PUBLIC_LOCALE ?? "en"] ?? en;
+export const t: Dictionary = pt;
 
 export type { Dictionary };

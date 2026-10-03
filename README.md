@@ -79,7 +79,7 @@ src/
    npm run dev      # http://localhost:3000
    ```
 
-Settings such as the timezone (default `Europe/Lisbon`), lesson length (60 min), booking window (28 days)
+Settings such as the timezone (default `America/Sao_Paulo`, Belo Horizonte), lesson length (60 min), booking window (28 days)
 and minimum notice (12 h) are in the `app_settings` table.
 
 ## Deploy on Vercel
@@ -217,13 +217,31 @@ tools; there is no public MFA bypass.
   remains protected after the new RLS policies.
 - Failed email delivery is visible without exposing passwords or links in logs.
 
-## Translating to Portuguese
+## Brazilian Portuguese and Belo Horizonte
 
-1. Copy `src/lib/i18n/en.ts` to `pt.ts`, translate the values and set `locale: "pt-PT"` (or `"pt-BR"`).
-   The `Dictionary` type ensures nothing is missing. Dates, weekday names and `<html lang>` follow `locale` automatically.
-2. Register it in `src/lib/i18n/index.ts` and set `NEXT_PUBLIC_LOCALE=pt`.
-3. Translate the additional account and security dictionaries under `src/lib/i18n`
-   when introducing Portuguese.
+The entire interface and automatic emails use Brazilian Portuguese (`pt-BR`).
+[`src/lib/i18n/pt.ts`](src/lib/i18n/pt.ts) implements the typed core dictionary;
+account, security, website and blog texts remain separate under `src/lib/i18n`.
+The English dictionary is retained as a key/type reference. `NEXT_PUBLIC_LOCALE`
+is no longer used; a deployment environment cannot silently switch parts back to English.
+
+For an existing project, run
+[`supabase/portuguese-belo-horizonte.sql`](supabase/portuguese-belo-horizonte.sql)
+after the website and student-login migrations, before deploying this version.
+It updates both the timezone default and the existing settings row and **replaces
+all homepage text with the Portuguese version**, as requested. Back up
+`website_content` first. Its revision increases so already-open editors cannot
+overwrite it. Do not rerun it after customizing the translated homepage.
+The placeholder teacher name is María Fernández; adjust it in the homepage editor.
+
+Belo Horizonte uses `America/Sao_Paulo` (currently Brasília time, UTC−3).
+Weekly hours and date/time blocks keep their local clock values and are interpreted
+in this timezone. Existing booked lessons keep their original UTC instants: only
+their displayed local time changes. Review existing appointments and availability
+after migration; the script does not silently reschedule classes.
+Calendars, blog publication dates, account activity and email lesson times use the
+Portuguese locale and the configured timezone. Existing blog articles, messages,
+names, private notes and learning objectives are **not** automatically translated.
 
 ## Homepage and blog administration
 
@@ -238,12 +256,12 @@ Do not assume the earlier security migration automatically protects future table
 
 ### Editing the homepage
 
-Open **My website** in the teacher sidebar. Choose Welcome section, About me,
-Student testimonials or Contact section. Edit the clearly labelled text fields,
-use **Preview my changes** and press **Save and update my website**.
+Open **Meu site** in the teacher sidebar. Choose Boas-vindas, Sobre mim,
+Depoimentos dos alunos or Contato. Edit the clearly labelled text fields,
+use **Ver minhas alterações** and press **Salvar e atualizar meu site**.
 
 - Saved text is public immediately; there is no need to redeploy.
-- The original English content is used until the first save.
+- Portuguese defaults are used until the first save (existing stored text requires the localization migration).
 - The preview uses the real homepage components; its contact form is disabled.
 - Two editors cannot silently overwrite each other: if another window saved first,
   reload before saving.

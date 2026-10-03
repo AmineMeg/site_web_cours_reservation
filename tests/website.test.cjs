@@ -11,7 +11,7 @@ function load(relative) {
   compiled.filename = filename;
   compiled.paths = Module._nodeModulePaths(path.dirname(filename));
   compiled.require = (name) => {
-    if (name === "@/lib/i18n") return { t: load("src/lib/i18n/en.ts").en };
+    if (name === "@/lib/i18n") return { t: load("src/lib/i18n/pt.ts").pt };
     if (name === "@/lib/config") return load("src/lib/config.ts");
     return require(name);
   };

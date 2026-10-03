@@ -63,10 +63,11 @@ test("expired, forged and malformed password proofs are rejected", () => {
 });
 
 test("account email templates never interpolate a password", () => {
-  const { en } = load("src/lib/i18n/en.ts");
+  const { pt } = load("src/lib/i18n/pt.ts");
   const data = { name: "Student", email: "student@example.com", url: "https://example.com/auth/confirm?token_hash=example" };
-  for (const template of [en.emails.credentials, en.emails.passwordReset]) {
+  for (const template of [pt.emails.credentials, pt.emails.passwordReset]) {
     assert.ok(template.body(data).includes(data.url));
     assert.ok(!template.body(data).includes("Password:"));
+    assert.ok(!template.body(data).includes("Senha:"));
   }
 });
