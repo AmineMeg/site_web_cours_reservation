@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { supabaseUrl } from "@/lib/supabase/env";
 import { field } from "@/lib/utils";
 import { t } from "@/lib/i18n";
 
@@ -16,7 +17,14 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
     password: String(formData.get("password") ?? ""),
   });
   if (error || !data.user) {
-    console.error("[login] signInWithPassword failed:", error?.status, error?.code, error?.message);
+    console.error(
+      "[login] signInWithPassword failed:",
+      error?.status,
+      error?.code,
+      error?.message,
+      "| supabase host:",
+      supabaseUrl(),
+    );
     return { message: t.login.error };
   }
 
