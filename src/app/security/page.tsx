@@ -6,8 +6,8 @@ import { safeNextPath } from "@/lib/security/redirects";
 export default async function SecurityRouterPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
   const { status } = await requireAuthenticatedUser();
-  if (!status.hasVerifiedFactor) redirect("/security/setup");
-  if (status.aal !== "aal2") {
+  if (status.requiresMfa && !status.hasVerifiedFactor) redirect("/security/setup");
+  if (status.requiresMfa && status.aal !== "aal2") {
     redirect(typeof next === "string" && next ? `/security/verify?next=${encodeURIComponent(next)}` : "/security/verify");
   }
   const target = safeNextPath(next);

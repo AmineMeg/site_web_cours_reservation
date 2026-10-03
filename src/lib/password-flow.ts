@@ -37,9 +37,11 @@ export async function requirePasswordFlow() {
     || !verifyPasswordFlow(value, authFlowSecret(), user.id, data.claims.session_id)) {
     redirect("/auth/forgot-password?expired=1");
   }
+  const { data: requiresMfa, error: policyError } = await supabase.rpc("security_requires_mfa");
+  if (policyError || typeof requiresMfa !== "boolean") throw new Error("Unable to check account security");
   const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
   if (factorsError) throw new Error("Unable to check account security");
-  if (factors.all.some((factor) => factor.status === "verified") && data.claims.aal !== "aal2") {
+  if (requiresMfa && factors.all.some((factor) => factor.status === "verified") && data.claims.aal !== "aal2") {
     redirect("/security?next=password");
   }
   return { supabase, user };

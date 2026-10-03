@@ -103,6 +103,27 @@ owner. To send to students, verify a domain and set `EMAIL_FROM` to an address o
 
 ## Account security rollout (existing production projects)
 
+### Current policy: teacher MFA, student passwords
+
+Students sign in with email and password only. The teacher still requires TOTP MFA.
+Password policies, rate limits, ownership rules and finite sessions remain enabled
+for everyone.
+
+Run [`supabase/student-password-login.sql`](supabase/student-password-login.sql)
+**last**, after the base schema, security, website and blog migrations, before
+deploying this version. It removes existing **student** MFA factors and recovery
+codes and ends their old sessions; teacher factors are not removed. Students must
+sign in again. If you later re-run `schema.sql` or `security.sql`, re-run this
+role-policy migration last, because the older scripts enforce MFA for all accounts.
+
+Invitation links accept Supabase SHA-224 (56 hex characters) and SHA-256 token
+hashes. An already consumed or expired link cannot be revived by this fix: send a
+fresh account access link from the student profile. Do not share token links in logs
+or screenshots.
+
+The following original rollout notes describe the base MFA layer; student accounts
+are exempted by the role-policy migration above.
+
 Do not deploy only the frontend: the database migration and Supabase settings are part
 of the protection. Back up the database and test on a staging project first.
 
@@ -141,7 +162,7 @@ of the protection. Back up the database and test on a staging project first.
 
 - **Create student:** the teacher sends a one-use activation link; no password is
   generated, emailed or known to the teacher. The student chooses a password and
-  configures an authenticator. A mail-delivery failure is shown explicitly, and the
+  signs in without an authenticator. A mail-delivery failure is shown explicitly, and the
   teacher can resend an account access link from the student profile.
 - **Forgot password:** `/auth/forgot-password` always gives the same account-existence
   message. Existing MFA must still be verified before changing the password.
@@ -174,19 +195,20 @@ set `TRUSTED_CLIENT_IP_HEADER` only to a header that your proxy always overwrite
 and cannot be supplied by a visitor. Without a trusted header, email/user limits
 still apply but IP limits cannot be safely enforced.
 
-If a student loses both their authenticator and recovery codes, the teacher can
-reset their authenticator from the student profile **after independently confirming
-their identity**. The student must enroll again. If the teacher loses both, the
+Students do not need authenticators or recovery codes; they can request a password
+reset link if they forget their password. If the teacher loses both their
+authenticator and recovery codes, the
 site owner must remove the factor and revoke sessions using the Supabase admin
 tools; there is no public MFA bypass.
 
 ### Production acceptance checklist
 
-- New and existing teacher/student accounts cannot access private data before MFA.
+- Teacher accounts cannot access private data before MFA. Students access only their
+  own data with a valid password session; no student MFA enrollment is required.
 - Wrong, expired and replayed activation/recovery links fail.
-- A password-recovery email does not bypass an already-enrolled authenticator.
-- Save recovery codes outside the browser; test one, then check that reusing it fails.
-- After recovery, verify that old sessions cannot access data and that configuring a
+- A teacher password-recovery email does not bypass an already-enrolled authenticator.
+- Save teacher recovery codes outside the browser; test one, then check that reusing it fails.
+- After teacher MFA recovery, verify that old sessions cannot access data and that configuring a
   new authenticator is mandatory.
 - "Sign out all devices" invalidates existing application sessions, not only refresh
   tokens. Test using two browsers.

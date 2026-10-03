@@ -36,8 +36,9 @@ export default async function SecuritySettingsPage() {
           {s.backToApp}
         </Link>
       </div>
-      <p className="text-lg text-stone-600">{s.settingsIntro}</p>
+      <p className="text-lg text-stone-600">{status.requiresMfa ? s.settingsIntro : s.studentSettingsIntro}</p>
 
+      {status.requiresMfa && <>
       <section className="space-y-3">
         <h2 className="text-2xl font-bold">{s.factorTitle}</h2>
         <p className="text-lg">{s.factorOn}</p>
@@ -50,6 +51,7 @@ export default async function SecuritySettingsPage() {
         {codesLeft !== null && codesLeft <= 3 && <p className="font-semibold text-red-700">{s.codesLow}</p>}
         <RegenerateCodes />
       </section>
+      </>}
 
       <SecurityPasswordForm />
 

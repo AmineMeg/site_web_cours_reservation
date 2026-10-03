@@ -6,6 +6,7 @@ import { securityText as s } from "@/lib/i18n/security";
 
 export default async function SecurityRecoverPage() {
   const { status } = await requireAuthenticatedUser();
+  if (!status.requiresMfa) redirect("/security/settings");
   if (!status.hasVerifiedFactor) redirect("/security/setup");
   if (status.aal === "aal2") redirect("/security/settings");
   return (

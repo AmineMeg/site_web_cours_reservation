@@ -7,8 +7,6 @@ import { buttonClass } from "@/components/ui/button";
 import { Notice } from "@/components/ui/Notice";
 import { t } from "@/lib/i18n";
 import { accountText } from "@/lib/i18n/account";
-import { resetStudentMfa } from "@/app/security/actions";
-import { securityText } from "@/lib/i18n/security";
 import type { ActionResult, Profile } from "@/lib/types";
 
 export function StudentEditForm({ student }: { student: Profile }) {
@@ -16,8 +14,6 @@ export function StudentEditForm({ student }: { student: Profile }) {
   const [state, action] = useActionState<ActionResult | null, FormData>(updateStudent, null);
   const [resetResult, setResetResult] = useState<ActionResult | null>(null);
   const [resetting, startReset] = useTransition();
-  const [mfaResult, setMfaResult] = useState<ActionResult | null>(null);
-  const [resettingMfa, startMfaReset] = useTransition();
 
   const reset = () => {
     if (!window.confirm(d.resetPasswordConfirm)) return;
@@ -71,18 +67,6 @@ export function StudentEditForm({ student }: { student: Profile }) {
           🔑 {d.resetPassword}
         </button>
         {resetResult && <Notice ok={resetResult.ok}>{resetResult.message}</Notice>}
-      </div>
-      <div className="card space-y-3">
-        <p className="text-stone-600">{accountText.mfaResetHelp}</p>
-        <button type="button" disabled={resettingMfa} className={buttonClass("danger", "lg")}
-          onClick={() => {
-            if (window.confirm(accountText.mfaResetConfirm)) {
-              startMfaReset(async () => setMfaResult(await resetStudentMfa(student.id)));
-            }
-          }}>
-          {securityText.resetStudentMfa}
-        </button>
-        {mfaResult && <Notice ok={mfaResult.ok}>{mfaResult.message}</Notice>}
       </div>
     </div>
   );

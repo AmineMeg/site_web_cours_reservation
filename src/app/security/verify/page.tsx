@@ -10,6 +10,7 @@ export default async function SecurityVerifyPage({ searchParams }: { searchParam
   const { next } = await searchParams;
   const nextValue = next === "password" ? "password" : safeNextPath(next);
   const { status } = await requireAuthenticatedUser();
+  if (!status.requiresMfa) redirect(nextValue ? `/security?next=${encodeURIComponent(nextValue)}` : "/security");
   if (!status.hasVerifiedFactor) redirect("/security/setup");
   if (status.aal === "aal2") redirect(nextValue ? `/security?next=${encodeURIComponent(nextValue)}` : "/security");
   return (

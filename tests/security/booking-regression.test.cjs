@@ -1,4 +1,4 @@
-// Regression of the original booking / RLS rules, now through MFA (AAL2) sessions.
+// Booking / RLS regression with password-only students and MFA teachers.
 // Run: node --test tests/security  (PGlite from PGLITE_PATH or the project)
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -10,11 +10,12 @@ const PGlite = loadPglite();
 const skip = PGlite ? false : "PGlite not available (set PGLITE_PATH to a node_modules folder containing @electric-sql/pglite)";
 const schemaSql = prepare(readFileSync(path.resolve(__dirname, "..", "..", "supabase", "schema.sql"), "utf8"));
 
-test("booking, credits, contacts and RLS rules still hold behind the MFA gate", { skip }, async (t) => {
+test("booking, credits, contacts and RLS rules hold with password-only students", { skip }, async (t) => {
   const db = new PGlite();
   await db.exec(PLATFORM);
   await db.exec(schemaSql);
   await db.exec(schemaSql); // idempotent
+  await db.exec(readFileSync(path.resolve(__dirname, "..", "..", "supabase", "student-password-login.sql"), "utf8"));
 
   const one = async (sql, params) => (await db.query(sql, params)).rows[0];
   const count = async (sql, params) => (await db.query(sql, params)).rows.length;
@@ -23,25 +24,25 @@ test("booking, credits, contacts and RLS rules still hold behind the MFA gate", 
     await db.query("select set_config('request.jwt.claims', $1, false)", [claims ? JSON.stringify(claims) : ""]);
     if (role) await db.exec(`set role ${role}`);
   };
-  // App-like sign-in: an AAL2 Supabase session, registered by the status call every request makes.
   const signIn = async (userId) => {
     await as(null, null);
+    const { role } = await one("select role from public.profiles where id=$1", [userId]);
     const { id } = await one("insert into auth.sessions (user_id) values ($1) returning id", [userId]);
     const now = Math.floor(Date.now() / 1000);
-    const claims = { sub: userId, role: "authenticated", aal: "aal2", session_id: id,
-      amr: [{ method: "totp", timestamp: now }, { method: "password", timestamp: now - 30 }] };
+    const claims = { sub: userId, role: "authenticated", aal: role === "teacher" ? "aal2" : "aal1", session_id: id,
+      amr: [{ method: "password", timestamp: now - 30 }, ...(role === "teacher" ? [{ method: "totp", timestamp: now }] : [])] };
     await as("authenticated", claims);
     assert.equal((await one("select session_ok from public.security_session_status()")).session_ok, true);
   };
   const user = async (email, meta) => {
     const { id } = await one("insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id", [email, JSON.stringify(meta)]);
-    await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [id]);
     return id;
   };
 
   const teacher = await user("t@x.com", { full_name: "Teacher" });
   const student = await user("s@x.com", { full_name: "Stu", phone: "123" });
   await db.query("update public.profiles set role = 'teacher' where id = $1", [teacher]);
+  await db.query("insert into auth.mfa_factors (user_id, status) values ($1, 'verified')", [teacher]);
   const p = await one("select * from public.profiles where id = $1", [student]);
   assert.ok(p.full_name === "Stu" && p.phone === "123" && p.role === "student" && p.credits === 0, "profile auto-created by trigger");
   await db.exec("update public.weekly_availability set is_active = true, start_time = '09:00', end_time = '17:00'");

@@ -10,7 +10,7 @@ export const accountText = {
   continue: "Continue",
   invalidLink: "This link is invalid or expired. Request a new reset link or ask your teacher for a new invitation.",
   setTitle: "Choose your password",
-  setIntro: "Use at least 15 characters. A memorable phrase is a good choice. Next, we will help you secure your account with an authenticator app.",
+  setIntro: "Use at least 15 characters. A memorable phrase is a good choice. Students sign in using their email and password.",
   newPassword: "New password",
   confirmPassword: "Repeat your new password",
   currentPassword: "Current password",

@@ -17,11 +17,12 @@ import { logSecurityEvent } from "@/lib/security/audit";
 import { accountText as a } from "@/lib/i18n/account";
 import { EMAIL_REGEX, field } from "@/lib/utils";
 import type { ActionResult } from "@/lib/types";
+import { validAccountToken } from "@/lib/account-token";
 
 export async function confirmAccountLink(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const tokenHash = field(formData, "token_hash");
   const type = field(formData, "type");
-  if (!/^[a-f0-9]{64}$/i.test(tokenHash) || (type !== "invite" && type !== "recovery")) {
+  if (!validAccountToken(tokenHash) || (type !== "invite" && type !== "recovery")) {
     return { ok: false, message: a.invalidLink };
   }
   if (!await limitAccountLinkVerification()) return { ok: false, message: a.error };

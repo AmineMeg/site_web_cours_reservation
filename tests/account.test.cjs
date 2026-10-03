@@ -19,9 +19,17 @@ function load(relative) {
 
 const { passwordProblem } = load("src/lib/password-policy.ts");
 const { signPasswordFlow, verifyPasswordFlow } = load("src/lib/auth-flow-proof.ts");
+const { validAccountToken } = load("src/lib/account-token.ts");
 const secret = "a".repeat(64);
 const now = 1_800_000_000_000;
 const proof = { userId: "user-a", sessionId: "session-a", expiresAt: now + 600_000 };
+
+test("Supabase SHA-224 invitation hashes and SHA-256 hashes pass without accepting arbitrary tokens", () => {
+  for (const size of [56, 64]) assert.equal(validAccountToken("a".repeat(size)), true);
+  for (const token of [null, "", "a".repeat(55), "a".repeat(57), "g".repeat(56), "https://example.com"]) {
+    assert.equal(validAccountToken(token), false);
+  }
+});
 
 test("password policy accepts phrases without imposing character classes", () => {
   assert.equal(passwordProblem("a memorable long phrase", "a memorable long phrase"), null);

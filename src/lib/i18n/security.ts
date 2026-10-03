@@ -59,6 +59,7 @@ export const securityText = {
 
   settingsTitle: "Account security",
   settingsIntro: "Your sign-in is protected by your password and an authenticator app.",
+  studentSettingsIntro: "Manage your password and signed-in devices. Students do not need an authenticator app.",
   factorTitle: "Authenticator app",
   factorOn: "On — a 6-digit code is required at every sign-in.",
   replaceFactor: "Use a new phone or app",

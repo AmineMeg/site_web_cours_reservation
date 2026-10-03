@@ -323,7 +323,7 @@ export const en = {
     credentials: {
       subject: "Your Spanish lessons account is ready",
       body: (p: { name: string; email: string; url: string }) =>
-        `Hello ${p.name},\n\nWelcome! Your student account is ready.\n\nActivate your account and choose your password:\n${p.url}\n\nYour login email: ${p.email}\n\nThis link expires and can only be used once. You will also set up an authenticator app to protect your account. Never share the link or your security codes.\n\n¡Hasta pronto!`,
+        `Hello ${p.name},\n\nWelcome! Your student account is ready.\n\nActivate your account and choose your password:\n${p.url}\n\nYour login email: ${p.email}\n\nThis link expires and can only be used once. Then sign in using your email and password. Never share the link or your password.\n\n¡Hasta pronto!`,
     },
     passwordReset: {
       subject: "Reset your Spanish lessons password",

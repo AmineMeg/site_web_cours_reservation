@@ -6,6 +6,8 @@ import { securityText as s } from "@/lib/i18n/security";
 
 export default async function SecuritySetupPage({ searchParams }: { searchParams: Promise<{ replace?: string }> }) {
   const replace = (await searchParams).replace === "1";
+  const context = await requireAuthenticatedUser();
+  if (!context.status.requiresMfa) redirect("/security/settings");
   if (replace) {
     await requireRecentAuthentication({ next: "/security/setup?replace=1" });
   } else {

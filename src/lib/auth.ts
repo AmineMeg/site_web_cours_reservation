@@ -19,6 +19,7 @@ export type SessionStatusReason =
 
 /** Security state of the current session, computed by the database (public.security_session_status). */
 export interface SecurityStatus {
+  requiresMfa: boolean;
   sessionOk: boolean;
   reason: SessionStatusReason;
   aal: "aal1" | "aal2";
@@ -55,7 +56,13 @@ export async function fetchSecurityStatus(supabase: SupabaseClient): Promise<Sec
     console.error("[security] Session status unavailable", error?.code);
     throw new Error("Unable to verify the session");
   }
+  const { data: requiresMfa, error: roleError } = await supabase.rpc("security_requires_mfa");
+  if (roleError || typeof requiresMfa !== "boolean") {
+    console.error("[security] Account policy unavailable", roleError?.code);
+    throw new Error("Unable to verify account policy. Run student-password-login.sql.");
+  }
   return {
+    requiresMfa,
     sessionOk: data.session_ok === true,
     reason: data.reason,
     aal: data.aal === "aal2" ? "aal2" : "aal1",
@@ -99,6 +106,7 @@ export async function requireAuthenticatedUser(): Promise<AuthenticatedContext> 
  */
 export async function requireMfa(): Promise<AuthenticatedContext> {
   const context = await requireAuthenticatedUser();
+  if (!context.status.requiresMfa) return context;
   if (!context.status.hasVerifiedFactor) redirect("/security/setup");
   if (context.status.aal !== "aal2") redirect("/security/verify");
   return context;
@@ -133,6 +141,8 @@ export async function requireRecentAuthentication(
   options: { next?: string; maxAgeSeconds?: number } = {},
 ): Promise<AuthenticatedContext> {
   const context = await requireMfa();
+  // Student sensitive changes confirm the current password in their action.
+  if (!context.status.requiresMfa) return context;
   if (!(await hasRecentAuthentication(options.maxAgeSeconds))) {
     const requestHeaders = await headers();
     const next =
@@ -150,7 +160,7 @@ export async function requireRecentAuthentication(
  */
 export const getCurrentProfile = cache(async () => {
   const { supabase, user, status } = await loadAuthContext();
-  if (!user || !status?.sessionOk || !status.hasVerifiedFactor || status.aal !== "aal2") {
+  if (!user || !status?.sessionOk || (status.requiresMfa && (!status.hasVerifiedFactor || status.aal !== "aal2"))) {
     return { supabase, profile: null as Profile | null };
   }
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();

@@ -6,7 +6,6 @@ import {
   requireAuthenticatedUser,
   requireMfa,
   requireRecentAuthentication,
-  requireTeacher,
   type AuthenticatedContext,
 } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -44,8 +43,9 @@ export interface CodeFormState {
 }
 
 async function enrollmentContext(replace: boolean): Promise<AuthenticatedContext | null> {
-  if (replace) return requireRecentAuthentication({ next: REPLACE_PATH });
   const context = await requireAuthenticatedUser();
+  if (!context.status.requiresMfa) redirect("/security/settings");
+  if (replace) return requireRecentAuthentication({ next: REPLACE_PATH });
   return context.status.hasVerifiedFactor ? null : context;
 }
 
@@ -158,7 +158,8 @@ export async function confirmTotpEnrollment(factorId: string, code: string, repl
 
 /** Replaces every recovery code (requires a fresh authenticator code). */
 export async function regenerateRecoveryCodes(): Promise<EnrollmentResult> {
-  const { user } = await requireRecentAuthentication({ next: "/security/settings" });
+  const { user, status } = await requireRecentAuthentication({ next: "/security/settings" });
+  if (!status.requiresMfa) return { ok: false, message: s.error };
   const codes = await issueRecoveryCodes(user.id);
   if (!codes) return { ok: false, message: s.error };
   await sendSecurityAlert(user.email, "codes_regenerated");
@@ -171,6 +172,7 @@ export async function verifyTotpCode(_prev: CodeFormState, formData: FormData): 
   const next = safeNextPath(formData.get("next"));
   const { supabase, user, status } =
     mode === "reauth" ? await requireMfa() : await requireAuthenticatedUser();
+  if (!status.requiresMfa) redirect("/security/settings");
   if (!status.hasVerifiedFactor) redirect("/security/setup");
 
   const code = normalizeTotpCode(formData.get("code"));
@@ -207,6 +209,7 @@ export async function verifyTotpCode(_prev: CodeFormState, formData: FormData): 
  */
 export async function recoverWithCode(_prev: CodeFormState, formData: FormData): Promise<CodeFormState> {
   const { supabase, user, status } = await requireAuthenticatedUser();
+  if (!status.requiresMfa) redirect("/security/settings");
   if (!status.hasVerifiedFactor) redirect("/security/setup");
   if (status.aal === "aal2") redirect("/security/settings");
   if (!user.email) return { message: s.error };
@@ -289,42 +292,4 @@ export async function signOutEverywhere(): Promise<ActionResult> {
   await sendSecurityAlert(user.email, "signed_out_everywhere");
   await endLocalSession(supabase);
   redirect("/login?reason=signed_out_everywhere");
-}
-/**
- * Teacher only (fresh authenticator code required): removes a STUDENT's
- * authenticator after the teacher confirmed the student's identity offline.
- * All the student's sessions end; at next sign-in (password) they must set up
- * a new authenticator. Wire it into the admin UI as a confirmation action.
- */
-export async function resetStudentMfa(studentId: string): Promise<ActionResult> {
-  const { supabase } = await requireTeacher();
-  const { user } = await requireRecentAuthentication();
-  if (typeof studentId !== "string" || !/^[0-9a-f-]{36}$/i.test(studentId) || studentId === user.id) {
-    return { ok: false, message: s.error };
-  }
-  const { data: student } = await supabase.from("profiles").select("id, role").eq("id", studentId).maybeSingle();
-  if (!student || student.role !== "student") return { ok: false, message: s.error };
-
-  const admin = createAdminClient();
-  const { data: factorList, error: listError } = await admin.auth.admin.mfa.listFactors({ userId: studentId });
-  if (listError || !factorList) {
-    console.error("[security] Factor listing failed during reset", listError?.code);
-    return { ok: false, message: s.error };
-  }
-  for (const factor of factorList.factors) {
-    const { error } = await admin.auth.admin.mfa.deleteFactor({ id: factor.id, userId: studentId });
-    if (error) {
-      console.error("[security] Factor deletion failed during reset", error.code);
-      return { ok: false, message: s.error };
-    }
-  }
-  const { error: finishError } = await admin.rpc("security_finish_mfa_recovery", {
-    p_user_id: studentId,
-    p_method: "teacher",
-  });
-  if (finishError) {
-    console.error("[security] Authenticator reset could not be completed", finishError.code);
-    return { ok: false, message: s.error };
-  }
-  return { ok: true, message: s.studentMfaReset };
 }
