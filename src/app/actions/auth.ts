@@ -15,13 +15,20 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
     email: field(formData, "email").toLowerCase(),
     password: String(formData.get("password") ?? ""),
   });
-  if (error || !data.user) return { message: t.login.error };
+  if (error || !data.user) {
+    console.error("[login] signInWithPassword failed:", error?.status, error?.code, error?.message);
+    return { message: t.login.error };
+  }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role, is_active")
     .eq("id", data.user.id)
     .single();
+
+  if (profileError || !profile) {
+    console.error("[login] profile not found for user", data.user.id, data.user.email, profileError?.message);
+  }
 
   if (profile?.role === "teacher") redirect("/admin");
   if (profile && !profile.is_active) {
