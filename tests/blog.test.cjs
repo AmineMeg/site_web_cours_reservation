@@ -212,21 +212,12 @@ test("blog renderer escapes text rather than interpreting HTML", () => {
 });
 
 function uploadModule(requireTeacher) {
-  const routeFile = path.resolve(__dirname, "../src/app/admin/blog/upload/route.ts");
-  const loaded = new Module(routeFile, module);
-  loaded.filename = routeFile;
-  loaded.paths = Module._nodeModulePaths(path.dirname(routeFile));
-  const baseRequire = loaded.require.bind(loaded);
-  loaded.require = (name) => {
-    if (name === "@/lib/auth") return { requireTeacher };
-    if (name === "@/lib/blog/validation") return compiled.exports;
-    if (name === "@/lib/i18n/blog") return { blogText };
-    return baseRequire(name);
-  };
-  loaded._compile(ts.transpileModule(readFileSync(routeFile, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, routeFile);
-  return loaded.exports;
+  const { createLoader } = require("./load-typescript.cjs");
+  return createLoader({
+    "@/lib/auth": { requireTeacher },
+    "@/lib/blog/validation": compiled.exports,
+    "@/lib/i18n/blog": { blogText },
+  })("src/app/admin/blog/upload/route.ts");
 }
 
 test("blog upload verifies authentication, same-origin, bytes and random object names", async () => {

@@ -16,7 +16,7 @@ export const getHomepage = cache(async () => {
     throw new Error("Unable to load homepage content. Run the website migration.");
   }
   if (!data) return { content: homepageDefaults, revision: 0 };
-  const content = parseHomepageContent(data.content);
+  const content = parseHomepageContent(data.content, supabaseUrl());
   if (!content) {
     console.error("[website] Invalid saved homepage content");
     throw new Error("Invalid homepage content");

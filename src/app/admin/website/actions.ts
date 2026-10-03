@@ -5,10 +5,11 @@ import { requireTeacher } from "@/lib/auth";
 import { parseHomepageContent } from "@/lib/website-content";
 import { websiteText as w } from "@/lib/i18n/website";
 import type { ActionResult } from "@/lib/types";
+import { supabaseUrl } from "@/lib/supabase/env";
 
 export async function saveHomepage(value: unknown, revision: number): Promise<ActionResult & { revision?: number }> {
   const { supabase } = await requireTeacher();
-  const content = parseHomepageContent(value);
+  const content = parseHomepageContent(value, supabaseUrl());
   if (!content || !Number.isInteger(revision) || revision < 0) return { ok: false, message: w.invalid };
   const { data, error } = await supabase.rpc("save_homepage", { p_content: content, p_revision: revision });
   if (error || typeof data !== "number") {

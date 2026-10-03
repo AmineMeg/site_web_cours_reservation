@@ -7,6 +7,7 @@ const load = createLoader({
   "@/app/actions/contact": { submitContact: async () => { throw new Error("Preview must not send a contact"); } },
   "@/app/admin/website/actions": { saveHomepage: async () => ({ ok: true, revision: 2 }) },
   "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
+  "next/image": { default: ({ unoptimized, ...props }) => React.createElement("img", props) },
 });
 const { Homepage } = load("src/components/landing/Homepage.tsx");
 const { HomepageEditingContext } = load("src/components/landing/HomepageText.tsx");
@@ -56,4 +57,19 @@ test("editor starts with a live preview and grouped access to every field", () =
   assert.match(html, /Todas as alterações estão salvas/);
   assert.match(html, /Salvar e atualizar meu site/);
   assert.doesNotMatch(html, /Ver minhas alterações|Voltar à edição/);
+});
+
+test("both photos render in public and editable previews, with original visuals available without photos", () => {
+  const content = { ...homepageDefaults,
+    heroImage: "https://project.supabase.co/storage/v1/object/public/homepage-images/12345678-1234-4123-8123-123456789abc.jpg",
+    teacherImage: "https://project.supabase.co/storage/v1/object/public/homepage-images/12345678-1234-4123-8123-123456789abc.png" };
+  for (const html of [renderPreview(content, "teacherImage"), renderToStaticMarkup(React.createElement(Homepage, { content }))]) {
+    assert.match(html, /<img[^>]+alt="Fale espanhol com confiança desde a primeira aula"/);
+    assert.match(html, /<img[^>]+alt="Professora Teixeira"/);
+    assert.ok(html.includes(content.heroImage));
+    assert.ok(html.includes(content.teacherImage));
+    assert.doesNotMatch(html, /👩‍🏫|¿Hablamos\?/);
+  }
+  assert.match(renderPreview(homepageDefaults), /👩‍🏫/);
+  assert.match(renderPreview(homepageDefaults), /¿Hablamos\?/);
 });

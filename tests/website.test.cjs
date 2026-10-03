@@ -16,6 +16,7 @@ test("homepage validation rejects missing/extra keys, wrong types and exact leng
   assert.equal(parseHomepageContent({ ...homepageDefaults, heroTitle: "" }), null);
   assert.equal(parseHomepageContent({ ...homepageDefaults, heroTitle: 12 }), null);
   for (const key of Object.keys(homepageDefaults)) {
+    if (key === "heroImage" || key === "teacherImage") continue;
     assert.ok(parseHomepageContent({ ...homepageDefaults, [key]: "a".repeat(homepageFieldLimit(key)) }));
     assert.equal(parseHomepageContent({ ...homepageDefaults, [key]: "a".repeat(homepageFieldLimit(key) + 1) }), null);
   }
@@ -38,6 +39,8 @@ test("homepage migration enforces MFA, teacher role, validation and optimistic c
     const sql = fs.readFileSync(path.join(root, "supabase/website.sql"), "utf8");
     await db.exec(sql);
     await db.exec(sql);
+    // This test exercises the text RPC; the photo migration has its own storage harness.
+    const { heroImage, teacherImage, ...textDefaults } = homepageDefaults;
     const one = async (sql, params) => (await db.query(sql, params)).rows[0];
     const teacher = (await one("insert into auth.users (email) values ('teacher@example.com') returning id")).id;
     await db.query("update public.profiles set role='teacher' where id=$1", [teacher]);
@@ -47,13 +50,13 @@ test("homepage migration enforces MFA, teacher role, validation and optimistic c
     await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify(claims)]);
     await db.exec("set role authenticated");
     await db.query("select * from security_session_status()");
-    await assert.rejects(db.query("select save_homepage($1,0)", [homepageDefaults]), /NOT_ALLOWED/);
+    await assert.rejects(db.query("select save_homepage($1,0)", [textDefaults]), /NOT_ALLOWED/);
     claims.aal = "aal2";
     claims.amr = [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }];
     await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify(claims)]);
     await db.query("select * from security_session_status()");
-    assert.equal((await one("select save_homepage($1,0) revision", [homepageDefaults])).revision, 1);
-    await assert.rejects(db.query("select save_homepage($1,0)", [homepageDefaults]), /CONTENT_CONFLICT/);
+    assert.equal((await one("select save_homepage($1,0) revision", [textDefaults])).revision, 1);
+    await assert.rejects(db.query("select save_homepage($1,0)", [textDefaults]), /CONTENT_CONFLICT/);
     await assert.rejects(db.query("select save_homepage($1,1)", [{ heroTitle: "broken" }]), /INVALID_CONTENT/);
     await db.exec("reset role; set role anon");
     assert.equal((await db.query("select * from website_content")).rows.length, 1);

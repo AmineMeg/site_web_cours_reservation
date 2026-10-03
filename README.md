@@ -291,13 +291,34 @@ highlight identifies the selected text. The grouped list also gives access to
 every field, including button labels, the contact placeholder and the footer.
 Press **Salvar e atualizar meu site** to publish.
 
+To enable homepage photo uploads, run [`supabase/homepage-images.sql`](supabase/homepage-images.sql)
+in the Supabase SQL Editor **after `website.sql` and before deploying this version**.
+It creates the public `homepage-images` storage bucket and updates the save function.
+Existing customized texts and photos are preserved; the migration does not rewrite
+saved content or revisions. Older rows load with empty photo fields in the new editor,
+and the next save stores the photos with the normal revision increase. Rerunning is safe. If `website.sql`
+is rerun later, reapply `homepage-images.sql` to restore the photo-aware save function.
+
+Click the opening illustration or teacher portrait, then **Escolher uma foto**.
+Choose a PNG, JPEG or WebP file up to 4 MiB from the device. After uploading,
+the photo appears in the live preview; **Salvar e atualizar meu site** publishes
+photos and text together. **Usar o visual original** restores the placeholder.
+The **Fotos** group also reaches both visuals on small screens.
+Photos use a square opening image and a 4:5 portrait, cropped to fill their frames.
+The opening photo is visible on mobile when set; the default decorative illustration
+remains hidden there on the public page, but visible in the editor.
+Uploaded files are public immediately, even before saving. Replacing or discarding
+a photo does not delete previously uploaded files, so published pages and other
+editor windows cannot lose their images. Upload only images intended for public use.
+Unused files continue to count towards Supabase storage usage.
+
 - Saved text is public immediately; there is no need to redeploy.
 - Portuguese defaults are used until the first save (existing stored text requires the localization migration).
 - The preview uses the real homepage components; its contact form is disabled.
 - In the preview, the brand and call-to-action buttons select their editable text
   instead of navigating away. Public-site links and forms keep their normal behavior.
 - The preview and editing panel scroll separately and stack on smaller screens.
-- **Desfazer alteração deste texto** restores the selected text to its last saved
+- **Desfazer alteração deste item** restores the selected text or photo to its last saved
   value. **Descartar todas as alterações** restores all saved texts after confirmation.
 - Unsaved changes are marked clearly and trigger a warning when leaving the page.
 - Two editors cannot silently overwrite each other: if another window saved first,

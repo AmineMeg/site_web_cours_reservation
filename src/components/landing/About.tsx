@@ -2,6 +2,7 @@ import { t } from "@/lib/i18n";
 import { siteConfig } from "@/lib/config";
 import type { HomepageContent, HomepageKey } from "@/lib/website-content";
 import { HomepageText } from "./HomepageText";
+import { HomepageImage } from "./HomepageImage";
 
 export function About({ content }: { content?: HomepageContent }) {
   const name = content?.teacherName ?? siteConfig.teacherName;
@@ -17,13 +18,12 @@ export function About({ content }: { content?: HomepageContent }) {
   return (
     <section id="about" className="scroll-mt-20 bg-white py-20">
       <div className="mx-auto grid max-w-6xl gap-12 px-4 md:grid-cols-[1fr_1.4fr] md:items-center">
-        {/* Replace this block with <Image src="/teacher.jpg" .../> once a real photo is available. */}
         <div
-          role="img"
-          aria-label={name}
-          className="mx-auto flex aspect-[4/5] w-full max-w-sm items-center justify-center rounded-3xl bg-gradient-to-br from-accent-200 to-brand-200 text-9xl shadow-lg"
+          className="mx-auto aspect-[4/5] w-full max-w-sm rounded-3xl bg-gradient-to-br from-accent-200 to-brand-200 text-9xl shadow-lg"
         >
-          👩‍🏫
+          <HomepageImage field="teacherImage" src={content?.teacherImage} alt={name}>
+            <span role="img" aria-label={name} className="flex h-full items-center justify-center">👩‍🏫</span>
+          </HomepageImage>
         </div>
         <div>
           <h2 className="text-3xl font-bold sm:text-4xl"><HomepageText field="aboutTitle">{a.title}</HomepageText></h2>

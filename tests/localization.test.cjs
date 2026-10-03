@@ -26,8 +26,9 @@ test("Brazilian dictionary covers every core key and all homepage migration text
   compare(en, t);
   assert.equal(t.locale, "pt-BR");
   assert.equal(defaultSettings.timezone, tz);
-  assert.deepEqual(parseHomepageContent(migratedContent), migratedContent);
-  assert.deepEqual(migratedContent, { ...homepageDefaults, teacherName: "Professora Teixeira" });
+  assert.deepEqual(parseHomepageContent(migratedContent), { ...migratedContent, heroImage: "", teacherImage: "" });
+  const { heroImage, teacherImage, ...textDefaults } = homepageDefaults;
+  assert.deepEqual(migratedContent, { ...textDefaults, teacherName: "Professora Teixeira" });
   assert.match(t.emails.credentials.body({ name: "Ana", email: "ana@test.com", url: "https://example.com" }), /Olá, Ana/);
   assert.match(t.common.timezoneNote(tz), /Belo Horizonte/);
 });

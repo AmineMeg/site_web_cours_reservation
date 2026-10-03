@@ -26,29 +26,55 @@ export const homepageDefaults = {
   contactName: t.landing.contact.name, contactEmail: t.landing.contact.email,
   contactPhone: t.landing.contact.phone, contactMessage: t.landing.contact.message,
   contactPlaceholder: t.landing.contact.messagePlaceholder, contactSubmit: t.landing.contact.submit,
+  heroImage: "",
+  teacherImage: "",
 };
 
 export type HomepageContent = { [K in keyof typeof homepageDefaults]: string };
 export type HomepageKey = keyof HomepageContent;
-export type HomepageSection = "identity" | "hero" | "about" | "testimonials" | "contact";
+export type HomepageSection = "identity" | "hero" | "about" | "testimonials" | "contact" | "photos";
+export const homepageImageKeys = ["heroImage", "teacherImage"] as const;
+export type HomepageImageKey = typeof homepageImageKeys[number];
+export function isHomepageImage(key: HomepageKey): key is HomepageImageKey {
+  return key === "heroImage" || key === "teacherImage";
+}
+export function validHomepageImageUrl(value: unknown, origin: string): value is string {
+  if (typeof value !== "string" || value.length > 500) return false;
+  try {
+    const url = new URL(value);
+    return url.origin === new URL(origin).origin &&
+      ["https:", "http:"].includes(url.protocol) &&
+      !url.username && !url.password && !url.search && !url.hash &&
+      /^\/storage\/v1\/object\/public\/homepage-images\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(png|jpg|webp)$/.test(url.pathname) &&
+      value === `${url.origin}${url.pathname}`;
+  } catch { return false; }
+}
 export const homepageSections: Record<HomepageSection, HomepageKey[]> = {
   identity: ["siteName", "teacherName", "footerText"],
   hero: ["heroBadge", "heroTitle", "heroSubtitle", "heroPrimary", "heroSecondary"],
   about: ["aboutTitle", "aboutRole", "aboutParagraph1", "aboutParagraph2", "aboutParagraph3", "stat1Value", "stat1Label", "stat2Value", "stat2Label", "stat3Value", "stat3Label"],
   testimonials: ["testimonialsTitle", "testimonial1Quote", "testimonial1Name", "testimonial1Detail", "testimonial2Quote", "testimonial2Name", "testimonial2Detail", "testimonial3Quote", "testimonial3Name", "testimonial3Detail"],
   contact: ["contactTitle", "contactSubtitle", "contactName", "contactEmail", "contactPhone", "contactMessage", "contactPlaceholder", "contactSubmit"],
+  photos: [...homepageImageKeys],
 };
 export function homepageFieldLimit(key: HomepageKey): number {
+  if (isHomepageImage(key)) return 500;
   return /Paragraph|Quote|Subtitle/.test(key) ? 2000 : 200;
 }
 
-export function parseHomepageContent(value: unknown): HomepageContent | null {
+export function parseHomepageContent(value: unknown, imageOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""): HomepageContent | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const source: Record<string, unknown> = Object.fromEntries(Object.entries(value));
-  if (Object.keys(source).length !== Object.keys(homepageDefaults).length) return null;
+  if (Object.keys(source).some((key) => !Object.hasOwn(homepageDefaults, key))) return null;
   const result: HomepageContent = { ...homepageDefaults };
   for (const key of Object.keys(homepageDefaults) as HomepageKey[]) {
     const entry = source[key];
+    if (isHomepageImage(key)) {
+      if (entry === undefined || entry === "") { result[key] = ""; continue; }
+      if (!validHomepageImageUrl(entry, imageOrigin)) return null;
+      result[key] = entry;
+      continue;
+    }
     if (typeof entry !== "string" || !entry.trim() || entry.length > homepageFieldLimit(key)) return null;
     result[key] = entry.trim();
   }

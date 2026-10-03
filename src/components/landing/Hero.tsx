@@ -2,6 +2,7 @@ import { t } from "@/lib/i18n";
 import { buttonClass } from "@/components/ui/button";
 import type { HomepageContent } from "@/lib/website-content";
 import { HomepageText } from "./HomepageText";
+import { HomepageImage } from "./HomepageImage";
 
 export function Hero({ content, preview = false }: { content?: HomepageContent; preview?: boolean }) {
   const h = content ? {
@@ -27,12 +28,16 @@ export function Hero({ content, preview = false }: { content?: HomepageContent; 
             </CallToAction>
           </div>
         </div>
-        <div aria-hidden className="relative mx-auto hidden aspect-square w-full max-w-md md:block">
+        <div className={`relative mx-auto aspect-square w-full max-w-md ${preview || content?.heroImage ? "" : "hidden md:block"}`}>
           <div className="absolute inset-0 rotate-6 rounded-[3rem] bg-brand-600" />
           <div className="absolute inset-0 -rotate-3 rounded-[3rem] bg-accent-400" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-[3rem] bg-white text-center shadow-xl">
-            <span className="text-8xl">🇪🇸</span>
-            <span className="text-3xl font-bold text-stone-800">¿Hablamos?</span>
+          <div className="absolute inset-0 rounded-[3rem] bg-white text-center shadow-xl">
+            <HomepageImage field="heroImage" src={content?.heroImage} alt={h.title}>
+              <span aria-hidden className="flex h-full flex-col items-center justify-center gap-4">
+                <span className="text-8xl">🇪🇸</span>
+                <span className="text-3xl font-bold text-stone-800">¿Hablamos?</span>
+              </span>
+            </HomepageImage>
           </div>
         </div>
       </div>
