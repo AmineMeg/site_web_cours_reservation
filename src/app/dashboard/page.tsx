@@ -48,7 +48,6 @@ export default async function BookingPage() {
     busy: (busy ?? []) as BusyRange[],
   });
   const slots = studentBookingSlots(generated, profile.timezone, batches);
-  const days = [...new Set(slots.map((slot) => slot.dayKey))].sort();
   const myLessons = (mine ?? []) as Booking[];
 
   return (
@@ -63,7 +62,7 @@ export default async function BookingPage() {
         <div className="mb-6 space-y-2 rounded-xl bg-amber-50 p-4">
           <p>{r.cancellation}</p><p>{r.validity(settings.credit_validity_months)}</p><p>{r.refund}</p>
         </div>
-        <BookingCalendar slots={slots} days={days} credits={profile.credits} timezone={profile.timezone} />
+        <BookingCalendar slots={slots} credits={profile.credits} timezone={profile.timezone} />
       </section>
       <CreditExpiryList batches={batches} timezone={profile.timezone} />
 

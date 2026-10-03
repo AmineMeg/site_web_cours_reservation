@@ -104,10 +104,10 @@ export function sendTrialInvitation(p: { name: string; email: string; token: str
   const action = spaceAction(`/trial/${p.token}`, rules.inviteAction);
   return sendEmail({
     to: p.email, subject: rules.inviteSubject, replyTo: siteConfig.teacherEmail,
-    text: `${e.hello(p.name)}\n\n${rules.trialInfo}\n\n${rules.cancellation}\n\n${action.url}`,
+    text: `${e.hello(p.name)}\n\n${rules.trialInfo}\n\n${action.url}`,
     presentation: {
       title: rules.trialTitle, preview: rules.trialInfo, paragraphs: [e.hello(p.name), rules.trialInfo],
-      note: rules.cancellation, action,
+      action,
     },
   });
 }
@@ -119,10 +119,9 @@ export async function sendTrialBookingEmails(p: {
   const results = await Promise.all([
     sendEmail({
       to: p.email, subject: `${title} · ${p.when}`, replyTo: siteConfig.teacherEmail,
-      text: `${e.hello(p.name)}\n\n${title}\n${rules.trialLabel}\n${p.when}\n${p.message ?? ""}\n\n${rules.cancellation}`,
+      text: `${e.hello(p.name)}\n\n${title}\n${rules.trialLabel}\n${p.when}\n${p.message ?? ""}`,
       presentation: { title, preview: p.when, paragraphs: [e.hello(p.name), rules.trialLabel],
-        details: [{ label: e.lessonTime, value: p.when }, ...(p.message ? [{ label: e.teacherMessage, value: p.message }] : [])],
-        note: rules.cancellation },
+        details: [{ label: e.lessonTime, value: p.when }, ...(p.message ? [{ label: e.teacherMessage, value: p.message }] : [])] },
     }),
     sendEmail({
       to: siteConfig.teacherEmail, subject: `${title} · ${p.name} · ${p.teacherWhen}`, replyTo: p.email,

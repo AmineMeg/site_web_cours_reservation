@@ -336,6 +336,25 @@ Unused files continue to count towards Supabase storage usage.
 
 ### Real student testimonials
 
+#### Optional dedicated demo database fixtures
+
+For an isolated demonstration deployment only, run
+[`supabase/demo-reviews.sql`](supabase/demo-reviews.sql) **after `student-reviews.sql`**
+on the dedicated demo database. It adds three fictional Portuguese testimonials
+to a separate private `demo_student_reviews` table and includes them in the
+existing public endpoint. The homepage and editor preview display them normally,
+without an on-screen demo label. No fake student accounts, consent records,
+lessons or email requests are created. Rerunning does not duplicate fixtures or
+overwrite real reviews.
+
+Never apply this optional script to the database used by real students.
+To remove the fixtures, run
+[`supabase/remove-demo-reviews.sql`](supabase/remove-demo-reviews.sql): it restores
+the real-review-only endpoint and removes only the demo table. Reapplying
+`student-reviews.sql` also restores the real-review-only endpoint (but keeps the
+unused demo table). No application deployment is needed after seeding an
+already-configured demo site because its public homepage reads the database.
+
 Run [`supabase/student-reviews.sql`](supabase/student-reviews.sql) in Supabase
 **after the base schema, security and student-password-login migrations, before
 deploying this version**. It is safe to rerun and preserves homepage texts, photos
@@ -434,8 +453,11 @@ creation; do not use that older form or create accounts between migration and de
    `NEXT_PUBLIC_SITE_URL=https://professora-teixeira.site`, email credentials and
    `SECURITY_SECRET` are configured, then deploy.
 
-**Contact to student:** the contact form requires country, city and an IANA timezone
-(browser-detected, editable). It creates no Supabase Auth user. It sends the contact
+**Contact to student:** the contact form requires country (default **Brasil**, editable)
+and city. Its IANA timezone is detected automatically from the browser and submitted
+in a hidden field, without asking the visitor to choose it. Detection errors are
+shown explicitly and invalid timezones are rejected by the server.
+It creates no Supabase Auth user. It sends the contact
 a bearer link to `/trial/<token>`, valid for exactly seven days, and notifies Eliane.
 Only SHA-256 hashes of random 256-bit tokens are stored; trial RPCs are server-only,
 the page is not indexed and uses a no-referrer policy. The link grants access only
@@ -479,11 +501,15 @@ can always cancel, with a message. Charged lessons return their original credit
 to its original batch **without extending its expiry**; an expired refunded credit
 does not reappear in the available balance. Gifts and trials never generate credits.
 Rules are shown on the public page, trial page, booking page and credit controls.
+Trial invitation, confirmation and cancellation emails omit the 24-hour cancellation
+notice; the rule remains visible and enforced on the trial booking page.
 
 **Timezones:** weekly hours, blocks and Eliane's calendar retain the teacher's zone
 (`America/Sao_Paulo` by default). Student calendars regroup slots by the student's
-local date, even across midnight. Students and Eliane can edit the student's
-location/timezone. Date-specific UTC offsets in confirmations handle daylight
+local date, even across midnight. Students can edit their country/city; saving their
+profile refreshes the timezone from their browser. Eliane can correct a student's
+timezone manually in the admin panel; her browser never overwrites it.
+Date-specific UTC offsets in confirmations handle daylight
 saving time; ambiguous/nonexistent transition-crossing slots are not offered.
 Existing profiles default to the former teacher zone until their location is updated.
 

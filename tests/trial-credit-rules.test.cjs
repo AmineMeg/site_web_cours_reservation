@@ -10,6 +10,23 @@ const sql = (file) => fs.readFileSync(path.join(root, "supabase", file), "utf8")
 const migration = sql("trial-and-credit-rules.sql");
 const PGlite = loadPglite();
 
+test("browser timezone detection supports UTC and rejects unavailable zones without guessing Brazil", () => {
+  const { browserTimezone } = load("src/lib/timezones.ts");
+  const original = Intl.DateTimeFormat;
+  try {
+    for (const [detected, expected] of [["Europe/Paris", "Europe/Paris"], ["America/Sao_Paulo", "America/Sao_Paulo"], ["UTC", "Etc/UTC"]]) {
+      Intl.DateTimeFormat = function(locale, options) {
+        return options ? new original(locale, options) : { resolvedOptions: () => ({ timeZone: detected }) };
+      };
+      assert.equal(browserTimezone(), expected);
+    }
+    Intl.DateTimeFormat = () => ({ resolvedOptions: () => ({ timeZone: "" }) });
+    assert.throws(browserTimezone, /unavailable/);
+  } finally {
+    Intl.DateTimeFormat = original;
+  }
+});
+
 test("locations use IANA city zones and dates follow each zone, including DST and different local days", () => {
   const { validLocation, validTimezone } = load("src/lib/timezones.ts");
   const { dayKeyOf, formatDateTime } = load("src/lib/dates.ts");

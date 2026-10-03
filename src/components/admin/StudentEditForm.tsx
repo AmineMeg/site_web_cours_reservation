@@ -40,7 +40,7 @@ export function StudentEditForm({ student }: { student: Profile }) {
             <input id="phone" name="phone" type="tel" defaultValue={student.phone} maxLength={40} className="input" />
           </div>
         </div>
-        <LocationFields initial={student} />
+        <LocationFields initial={student} detectTimezone={false} />
         <div>
           <label htmlFor="objectives" className="label">{d.objectives}</label>
           <textarea id="objectives" name="objectives" rows={4} defaultValue={student.objectives} maxLength={4000} className="input" />

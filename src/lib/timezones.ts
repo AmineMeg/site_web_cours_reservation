@@ -1,3 +1,10 @@
+export function browserTimezone(): string {
+  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timezone = detected === "UTC" || detected === "GMT" ? "Etc/UTC" : detected;
+  if (!validTimezone(timezone)) throw new Error("Browser timezone unavailable");
+  return timezone;
+}
+
 export function validTimezone(value: string): boolean {
   if (!value || value.length > 100 || !value.includes("/")) return false;
   try {

@@ -91,6 +91,32 @@ test("every notification and security alert includes Portuguese presentation and
   assert.ok(cancellationHtml.includes("bgcolor="));
 });
 
+test("trial emails omit the 24-hour notice while regular confirmations retain it", async () => {
+  const messages = [];
+  const notifications = mocked("src/lib/notifications.ts", {
+    "@/lib/email": { sendEmail: async (payload) => { messages.push(payload); return { ok: true }; } },
+    "@/lib/config": { siteConfig: { siteUrl: "https://example.com", teacherEmail: "teacher@example.com" } },
+    "@/lib/i18n": { t: pt },
+  });
+  const user = { name: "Ana", email: "ana@example.com", token: "a".repeat(64),
+    when: "4 de outubro às 20:30 (America/New York, UTC-04:00)",
+    teacherWhen: "4 de outubro às 21:30 (America/Sao Paulo, UTC-03:00)" };
+  await notifications.sendTrialInvitation(user);
+  await notifications.sendTrialBookingEmails(user);
+  await notifications.sendTrialBookingEmails({ ...user, cancelled: true });
+  for (const message of messages) {
+    assert.doesNotMatch(message.text, /24 horas/);
+    assert.doesNotMatch(renderEmailHtml(message.text, message.presentation), /24 horas/);
+    assert.match(message.text, /30 minutos/);
+  }
+  assert.match(messages[0].presentation.action.url, /\/trial\/a{64}$/);
+  assert.match(messages[1].text, /20:30.*America\/New York/);
+  assert.match(messages[2].text, /21:30.*America\/Sao Paulo/);
+  await notifications.sendBookingEmails(user);
+  assert.match(messages[5].text, /24 horas/);
+  assert.match(renderEmailHtml(messages[5].text, messages[5].presentation), /24 horas/);
+});
+
 test("Resend and webhook receive HTML plus unchanged plain text; failures do not log content", async () => {
   const saved = { key: process.env.RESEND_API_KEY, webhook: process.env.EMAIL_WEBHOOK_URL };
   const oldFetch = global.fetch;

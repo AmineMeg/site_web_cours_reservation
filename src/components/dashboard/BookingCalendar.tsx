@@ -5,28 +5,27 @@ import { bookLesson } from "@/app/dashboard/actions";
 import { Modal } from "@/components/ui/Modal";
 import { Notice } from "@/components/ui/Notice";
 import { buttonClass } from "@/components/ui/button";
-import { formatDateTime, formatDayKey, formatTime } from "@/lib/dates";
+import { dayKeyOf, formatDateTime, formatDayKey, formatTime } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { ActionResult } from "@/lib/types";
 import type { Slot } from "@/lib/slots";
 
 export function BookingCalendar({
   slots,
-  days,
   credits,
   timezone,
 }: {
   slots: Slot[];
-  days: string[];
   credits: number;
   timezone: string;
 }) {
   const b = t.dashboard.booking;
   const byDay = useMemo(() => {
     const map: Record<string, Slot[]> = {};
-    for (const s of slots) (map[s.dayKey] ??= []).push(s);
+    for (const s of slots) (map[dayKeyOf(s.startsAt, timezone)] ??= []).push(s);
     return map;
-  }, [slots]);
+  }, [slots, timezone]);
+  const days = Object.keys(byDay).sort();
 
   const [selectedDay, setSelectedDay] = useState<string | null>(() => days.find((d) => byDay[d]?.length) ?? null);
   const [chosen, setChosen] = useState<Slot | null>(null);

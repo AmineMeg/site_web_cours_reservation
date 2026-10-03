@@ -152,6 +152,9 @@ test("public and admin surfaces show policy, location fields, trial labels and a
   const { ContactForm } = load("src/components/landing/ContactForm.tsx");
   const formHtml = renderToStaticMarkup(React.createElement(ContactForm));
   for (const name of ["country", "city", "timezone"]) assert.match(formHtml, new RegExp(`name="${name}"`));
+  assert.match(formHtml, /name="country"[^>]*value="Brasil"/);
+  assert.match(formHtml, /type="hidden" name="timezone"/);
+  assert.doesNotMatch(formHtml, /<select/);
   assert.match(formHtml, /30 minutos.*sem criar uma conta/);
   const { ContactCard } = load("src/components/admin/ContactCard.tsx");
   const html = renderToStaticMarkup(React.createElement(ContactCard, { contact, receivedLabel: "hoje", daysLeft: 30,
@@ -160,4 +163,82 @@ test("public and admin surfaces show policy, location fields, trial labels and a
   assert.match(html, /<button[^>]+disabled=""[^>]*>✅ Criar conta de aluno/);
   assert.match(html, /Aula experimental gratuita · 30 minutos/);
   assert.doesNotMatch(html, /🗑️/);
+});
+
+test("regular and trial calendars show New York local hours and dates rather than teacher day keys", () => {
+  const load = createLoader({
+    "@/app/dashboard/actions": {},
+    "@/app/trial/[token]/actions": {},
+  });
+  const { BookingCalendar } = load("src/components/dashboard/BookingCalendar.tsx");
+  const { TrialCalendar } = load("src/components/TrialCalendar.tsx");
+  const { dayKeyOf, formatDayKey } = load("src/lib/dates.ts");
+  const startsAt = "2026-07-06T03:30:00Z";
+  const slot = { startsAt, endsAt: "2026-07-06T04:30:00Z", dayKey: "2026-07-06", startMinutes: 30 };
+  const regular = renderToStaticMarkup(React.createElement(BookingCalendar, {
+    slots: [slot], credits: 1, timezone: "America/New_York",
+  }));
+  assert.match(regular, />23:30</);
+  assert.match(regular, /text-2xl">5</);
+  assert.doesNotMatch(regular, />00:30</);
+  const trial = renderToStaticMarkup(React.createElement(TrialCalendar, {
+    token, slots: [slot], timezone: "America/New_York", booking: null,
+  }));
+  assert.match(trial, />23:30</);
+  const day = dayKeyOf(startsAt, "America/New_York");
+  assert.equal(day, "2026-07-05");
+  assert.ok(trial.includes(formatDayKey(day, { weekday: "long", day: "numeric", month: "long" })));
+  const winter = renderToStaticMarkup(React.createElement(TrialCalendar, {
+    token, slots: [{ startsAt: "2026-12-06T03:30:00Z", endsAt: "2026-12-06T04:00:00Z" }],
+    timezone: "America/New_York", booking: null,
+  }));
+  assert.match(winter, />22:30</);
+});
+
+test("location fields detect browser timezone without replacing the student's zone in admin", () => {
+  let states, cursor, effect;
+  let detectionError = false;
+  const load = createLoader({
+    react: {
+      ...React,
+      useState(initial) {
+        const index = cursor++;
+        if (!(index in states)) states[index] = initial;
+        return [states[index], (value) => { states[index] = value; }];
+      },
+      useEffect(callback) { effect = callback; },
+    },
+    "@/lib/timezones": { browserTimezone: () => {
+      if (detectionError) throw new Error("Timezone unavailable");
+      return "Asia/Tokyo";
+    } },
+  });
+  const { LocationFields } = load("src/components/LocationFields.tsx");
+  const render = (props) => {
+    cursor = 0;
+    return renderToStaticMarkup(LocationFields(props));
+  };
+  states = [];
+  render({ initial: contact });
+  effect();
+  assert.match(render({ initial: contact }), /name="timezone" value="Asia\/Tokyo"/);
+  states = [];
+  render({ initial: contact, detectTimezone: false });
+  effect();
+  const html = render({ initial: contact, detectTimezone: false });
+  assert.match(html, /<select name="timezone"/);
+  assert.match(html, /value="Europe\/Paris" selected/);
+  assert.match(html, /name="country"[^>]*value="France"/);
+  states = [];
+  const preview = render({ preview: true });
+  assert.match(preview, /Brasil/);
+  assert.doesNotMatch(preview, /<input|<select/);
+  states = [];
+  detectionError = true;
+  render({});
+  effect();
+  const failed = render({});
+  assert.match(failed, /role="alert"/);
+  assert.match(failed, /name="timezone" value=""/);
+  assert.match(failed, /Não conseguimos detectar/);
 });
