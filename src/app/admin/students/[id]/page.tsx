@@ -1,0 +1,64 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireTeacher, getSettings } from "@/lib/auth";
+import { StudentEditForm } from "@/components/admin/StudentEditForm";
+import { CreditControl } from "@/components/admin/CreditControl";
+import { formatDateTime } from "@/lib/dates";
+import { t } from "@/lib/i18n";
+import type { Booking, Profile } from "@/lib/types";
+
+export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { supabase } = await requireTeacher();
+  const d = t.admin.studentDetail;
+
+  const [{ data: student }, { data: lessons }, settings] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", id).eq("role", "student").maybeSingle(),
+    supabase
+      .from("bookings")
+      .select("*")
+      .eq("student_id", id)
+      .eq("status", "booked")
+      .gte("starts_at", new Date().toISOString())
+      .order("starts_at"),
+    getSettings(supabase),
+  ]);
+  if (!student) notFound();
+  const profile = student as Profile;
+  const upcoming = (lessons ?? []) as Booking[];
+
+  return (
+    <>
+      <Link href="/admin/students" className="mb-6 inline-block text-lg font-medium text-stone-700 hover:text-brand-700">
+        {d.back}
+      </Link>
+      <h1 className="mb-8 text-3xl font-bold sm:text-4xl">{profile.full_name || profile.email}</h1>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <StudentEditForm student={profile} />
+        <div className="space-y-6">
+          <CreditControl studentId={profile.id} initialCredits={profile.credits} />
+          <div className="card">
+            <h2 className="mb-3 text-xl font-bold">📅 {d.upcoming}</h2>
+            {upcoming.length === 0 ? (
+              <p className="text-stone-600">{d.noUpcoming}</p>
+            ) : (
+              <ul className="space-y-2">
+                {upcoming.map((b) => (
+                  <li key={b.id} className="rounded-xl bg-stone-50 px-3 py-2 font-medium">
+                    {formatDateTime(b.starts_at, settings.timezone)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {profile.phone && (
+            <a href={`tel:${profile.phone}`} className="card block text-center text-xl font-bold text-brand-700">
+              📞 {t.common.call} {profile.phone}
+            </a>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

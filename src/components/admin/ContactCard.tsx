@@ -1,0 +1,85 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { createStudentFromContact, deleteContact } from "@/app/admin/actions";
+import { buttonClass } from "@/components/ui/button";
+import { Notice } from "@/components/ui/Notice";
+import { t } from "@/lib/i18n";
+import type { ActionResult, Contact } from "@/lib/types";
+
+export function ContactCard({
+  contact,
+  receivedLabel,
+  daysLeft,
+}: {
+  contact: Contact;
+  receivedLabel: string;
+  daysLeft: number;
+}) {
+  const c = t.admin.contacts;
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<ActionResult | null>(null);
+
+  const convert = () =>
+    startTransition(async () => {
+      setResult(await createStudentFromContact(contact.id));
+    });
+
+  const remove = () => {
+    if (!window.confirm(c.removeConfirm(contact.name))) return;
+    startTransition(async () => {
+      setResult(await deleteContact(contact.id));
+    });
+  };
+
+  if (result?.ok) {
+    return (
+      <li>
+        <Notice ok>{result.message}</Notice>
+      </li>
+    );
+  }
+
+  return (
+    <li className="card">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
+          <h2 className="text-2xl font-bold">{contact.name}</h2>
+          <p className="text-stone-500">{c.received(receivedLabel)}</p>
+          <p className="text-lg">
+            📧{" "}
+            <a href={`mailto:${contact.email}`} className="break-all font-medium text-brand-700 underline">
+              {contact.email}
+            </a>
+          </p>
+          {contact.phone && (
+            <p className="text-lg">
+              📞{" "}
+              <a href={`tel:${contact.phone}`} className="font-medium text-brand-700 underline">
+                {contact.phone}
+              </a>
+            </p>
+          )}
+          <blockquote className="mt-3 whitespace-pre-line rounded-xl bg-stone-50 p-4 text-lg text-stone-700">
+            {contact.message || c.noMessage}
+          </blockquote>
+          <p className="text-sm text-stone-500">{c.autoDelete(daysLeft)}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-3 lg:w-72">
+          <button type="button" onClick={convert} disabled={pending} className={buttonClass("success", "xl", "w-full")}>
+            {pending ? c.creating : `✅ ${c.createAccount}`}
+          </button>
+          <button type="button" onClick={remove} disabled={pending} className={buttonClass("ghost", "md", "w-full")}>
+            🗑️ {c.remove}
+          </button>
+        </div>
+      </div>
+      {result && !result.ok && (
+        <div className="mt-4">
+          <Notice ok={false}>{result.message}</Notice>
+        </div>
+      )}
+    </li>
+  );
+}
