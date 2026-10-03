@@ -454,6 +454,8 @@ creation; do not use that older form or create accounts between migration and de
    It adds atomic calendar-first onboarding and a rolling 30-day trial horizon.
    Rerunning is safe and preserves existing bookings, contacts, credits and custom
    homepage text. It changes only the former default contact subtitle and submit label.
+   Reapply its current version when updating to country-only forms: the legacy city
+   RPC parameter becomes optional (empty), with historical city values preserved.
 4. Set `NEXT_PUBLIC_TEACHER_NAME=Eliane Teixeira` and update only the display name
    of `EMAIL_FROM`, retaining the verified sending address. Ensure
    `NEXT_PUBLIC_SITE_URL=https://professora-teixeira.site`, email credentials and
@@ -467,8 +469,8 @@ lesson booking window; teacher working hours, blocks, notice and overlaps still 
 Clicking a time opens the contact form with a visible summary and an option to go back.
 Selecting does not hold the slot: availability is checked again on submission.
 
-The contact form requires country (default **Brasil**, editable)
-and city. Its IANA timezone is detected automatically from the browser and submitted
+The contact form requires only country (default **Brasil**, editable), not city.
+Its IANA timezone is detected automatically from the browser and submitted
 in a hidden field, without asking the visitor to choose it. Detection errors are
 shown explicitly and invalid timezones are rejected by the server.
 It creates no Supabase Auth user. Submission atomically saves the contact, creates
@@ -525,12 +527,15 @@ notice; the rule remains visible and enforced on the trial booking page.
 
 **Timezones:** weekly hours, blocks and Eliane's calendar retain the teacher's zone
 (`America/Sao_Paulo` by default). Student calendars regroup slots by the student's
-local date, even across midnight. Students can edit their country/city; saving their
+local date, even across midnight. Students can edit their country; saving their
 profile refreshes the timezone from their browser. Eliane can correct a student's
 timezone manually in the admin panel; her browser never overwrites it.
 Date-specific UTC offsets in confirmations handle daylight
 saving time; ambiguous/nonexistent transition-crossing slots are not offered.
 Existing profiles default to the former teacher zone until their location is updated.
+City is no longer collected or displayed in forms, contact cards or notifications.
+The legacy database columns remain for compatibility; existing city data is not deleted
+or overwritten when editing a student.
 
 Targeted validation:
 ```powershell

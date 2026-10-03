@@ -215,7 +215,7 @@ export async function updateStudent(_prev: ActionResult | null, formData: FormDa
     objectives: field(formData, "objectives").slice(0, 4000),
     teacher_notes: field(formData, "teacher_notes").slice(0, 4000),
     is_active: formData.get("is_active") === "on",
-    country: field(formData, "country"), city: field(formData, "city"), timezone: field(formData, "timezone"),
+    country: field(formData, "country"), timezone: field(formData, "timezone"),
   };
   if (!id || !EMAIL_REGEX.test(update.email)) return fail(t.landing.contact.errors.email);
   if (!validLocation(update)) return fail(r.locationError);

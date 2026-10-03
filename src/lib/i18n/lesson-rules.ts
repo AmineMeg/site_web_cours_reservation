@@ -1,9 +1,9 @@
 export const lessonRules = {
-  country: "País", city: "Cidade", timezone: "Fuso horário",
+  country: "País", timezone: "Fuso horário",
   timezoneHelp: "Escolha o fuso da sua cidade. Os horários das aulas serão mostrados nesse fuso, incluindo mudanças de horário de verão.",
   timezoneAutomatic: "Seu fuso horário é detectado automaticamente pelo navegador.",
   timezoneDetectionError: "Não conseguimos detectar seu fuso horário. Confira as configurações de data e hora do dispositivo e recarregue a página. Se o problema continuar, entre em contato com Eliane.",
-  locationError: "Confira seu país e sua cidade. Se o fuso horário não foi detectado, recarregue a página ou entre em contato com Eliane.",
+  locationError: "Confira seu país. Se o fuso horário não foi detectado, recarregue a página ou entre em contato com Eliane.",
   online: "Aulas online com Eliane Teixeira, de qualquer lugar do mundo.",
   trialTitle: "Sua aula experimental gratuita",
   chooseTrial: "Escolha sua aula experimental",

@@ -9,7 +9,7 @@ const contact = { id: "contact", name: "Ana", email: "ana@test.com", phone: "123
 
 function form(values = {}) {
   const data = new FormData();
-  for (const [key, value] of Object.entries({ name: "Ana", email: "ANA@test.com", country: "France", city: "Paris", timezone: "Europe/Paris",
+  for (const [key, value] of Object.entries({ name: "Ana", email: "ANA@test.com", country: "France", timezone: "Europe/Paris",
     startsAt: "2026-10-05T12:00:00Z", ...values })) data.set(key, value);
   return data;
 }
@@ -46,6 +46,7 @@ test("contact action books atomically, validates location/slot, rate-limits and 
   assert.equal(calls.at(-1)[0], "submit_trial_booking");
   assert.equal(calls.at(-1)[1].p_email, "ana@test.com");
   assert.equal(calls.at(-1)[1].p_timezone, "Europe/Paris");
+  assert.equal(calls.at(-1)[1].p_city, "");
   const { trialHash } = load("src/lib/trial.ts");
   assert.equal(calls.at(-1)[1].p_hash, trialHash(emails[0].token));
   assert.notEqual(calls.at(-1)[1].p_hash, emails[0].token);
@@ -169,7 +170,8 @@ test("public and admin surfaces show policy, location fields, trial labels and a
   });
   const { ContactForm } = load("src/components/landing/ContactForm.tsx");
   const formHtml = renderToStaticMarkup(React.createElement(ContactForm));
-  for (const name of ["country", "city", "timezone"]) assert.match(formHtml, new RegExp(`name="${name}"`));
+  for (const name of ["country", "timezone"]) assert.match(formHtml, new RegExp(`name="${name}"`));
+  assert.doesNotMatch(formHtml, /name="city"|Cidade/);
   assert.match(formHtml, /name="country"[^>]*value="Brasil"/);
   assert.match(formHtml, /type="hidden" name="timezone"/);
   assert.doesNotMatch(formHtml, /<select/);
@@ -180,7 +182,48 @@ test("public and admin surfaces show policy, location fields, trial labels and a
     trial: { id: "trial", starts_at: "2026-10-05T12:00:00Z" } }));
   assert.match(html, /<button[^>]+disabled=""[^>]*>✅ Criar conta de aluno/);
   assert.match(html, /Aula experimental gratuita · 30 minutos/);
+  assert.doesNotMatch(html, /Paris, France/);
   assert.doesNotMatch(html, /🗑️/);
+});
+
+test("student and teacher profile forms omit city and updates preserve historical city data", async () => {
+  const updates = [];
+  const profile = { id: "student", ...contact, full_name: "Ana", objectives: "", role: "student", is_active: true };
+  const supabase = { from: (table) => {
+    assert.equal(table, "profiles");
+    return {
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile, error: null }) }) }),
+      update: (payload) => ({ eq: async () => { updates.push(payload); return { error: null }; } }),
+    };
+  } };
+  const load = createLoader({
+    "server-only": {},
+    "next/cache": { revalidatePath() {} },
+    "@/lib/auth": {
+      requireStudent: async () => ({ supabase, profile }),
+      requireTeacher: async () => ({ supabase, profile: { role: "teacher" } }),
+      requireRecentAuthentication: async () => ({}),
+    },
+    "@/components/SecurityPasswordForm": { SecurityPasswordForm: () => null },
+  });
+  const { ProfileForm } = load("src/components/dashboard/ProfileForm.tsx");
+  const { StudentEditForm } = load("src/components/admin/StudentEditForm.tsx");
+  for (const html of [
+    renderToStaticMarkup(React.createElement(ProfileForm, { profile })),
+    renderToStaticMarkup(React.createElement(StudentEditForm, { student: profile })),
+  ]) {
+    assert.match(html, /name="country"/);
+    assert.doesNotMatch(html, /name="city"|Cidade/);
+  }
+  const data = form({ id: profile.id, full_name: "Ana", is_active: "on", country: "Brasil" });
+  assert.equal((await load("src/app/dashboard/actions.ts").updateMyProfile(null, data)).ok, true);
+  assert.equal((await load("src/app/admin/actions.ts").updateStudent(null, data)).ok, true);
+  assert.equal(updates.length, 2);
+  for (const update of updates) {
+    assert.equal(update.country, "Brasil");
+    assert.equal(update.timezone, "Europe/Paris");
+    assert.equal(Object.hasOwn(update, "city"), false);
+  }
 });
 
 test("regular and trial calendars show New York local hours and dates rather than teacher day keys", () => {

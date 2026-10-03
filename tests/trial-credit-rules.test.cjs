@@ -30,9 +30,10 @@ test("browser timezone detection supports UTC and rejects unavailable zones with
 test("locations use IANA city zones and dates follow each zone, including DST and different local days", () => {
   const { validLocation, validTimezone } = load("src/lib/timezones.ts");
   const { dayKeyOf, formatDateTime } = load("src/lib/dates.ts");
-  assert.equal(validLocation({ country: "France", city: "Paris", timezone: "Europe/Paris" }), true);
+  assert.equal(validLocation({ country: "France", timezone: "Europe/Paris" }), true);
   for (const zone of ["", "Europe/Unknown", "GMT+3", "UTC"]) assert.equal(validTimezone(zone), false);
-  assert.equal(validLocation({ country: "", city: "Paris", timezone: "Europe/Paris" }), false);
+  assert.equal(validLocation({ country: "", timezone: "Europe/Paris" }), false);
+  assert.equal(validLocation({ country: "x".repeat(101), timezone: "Europe/Paris" }), false);
   assert.equal(dayKeyOf("2026-10-05T00:30:00Z", "America/Sao_Paulo"), "2026-10-04");
   assert.equal(dayKeyOf("2026-10-05T00:30:00Z", "Asia/Tokyo"), "2026-10-05");
   assert.match(formatDateTime("2026-07-05T12:00:00Z", "Europe/Paris"), /UTC\+02:00/);

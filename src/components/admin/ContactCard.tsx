@@ -68,7 +68,7 @@ export function ContactCard({
           <blockquote className="mt-3 whitespace-pre-line rounded-xl bg-stone-50 p-4 text-lg text-stone-700">
             {contact.message || c.noMessage}
           </blockquote>
-          <p className="text-stone-600">{contact.city}, {contact.country} · {contact.timezone}</p>
+          <p className="text-stone-600">{contact.country} · {contact.timezone}</p>
           <p className="text-lg font-semibold">{contact.trial_declined_at ? r.declined : trial
             ? `${r.trialLabel} · ${formatDateTime(trial.starts_at, timezone)}` : r.waiting}</p>
           <p className="text-sm text-stone-500">{hasTrialHistory ? r.retained : c.autoDelete(daysLeft)}</p>

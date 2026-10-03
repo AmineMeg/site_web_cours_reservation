@@ -10,7 +10,7 @@ export default async function ProfilePage() {
         email: profile.email,
         phone: profile.phone,
         objectives: profile.objectives,
-        country: profile.country, city: profile.city, timezone: profile.timezone,
+        country: profile.country, timezone: profile.timezone,
       }}
     />
   );

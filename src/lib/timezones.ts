@@ -15,7 +15,7 @@ export function validTimezone(value: string): boolean {
   }
 }
 
-export function validLocation(location: { country: string; city: string; timezone: string }): boolean {
+export function validLocation(location: { country: string; timezone: string }): boolean {
   return location.country.length > 0 && location.country.length <= 100 &&
-    location.city.length > 0 && location.city.length <= 100 && validTimezone(location.timezone);
+    validTimezone(location.timezone);
 }

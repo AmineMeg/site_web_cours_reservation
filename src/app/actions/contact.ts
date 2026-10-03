@@ -35,7 +35,6 @@ export async function submitContact(_prev: ContactFormState, formData: FormData)
     phone: field(formData, "phone"),
     message: field(formData, "message"),
     country: field(formData, "country"),
-    city: field(formData, "city"),
     timezone: field(formData, "timezone"),
   };
 
@@ -58,7 +57,7 @@ export async function submitContact(_prev: ContactFormState, formData: FormData)
   const { token, hash } = newTrialToken();
   const { data: saved, error } = await admin.rpc("submit_trial_booking", {
     p_name: data.name, p_email: data.email, p_phone: data.phone, p_message: data.message,
-    p_country: data.country, p_city: data.city, p_timezone: data.timezone, p_hash: hash, p_start: startsAt,
+    p_country: data.country, p_city: "", p_timezone: data.timezone, p_hash: hash, p_start: startsAt,
   });
   if (error) {
     if (error.message.includes("SLOT_NOT_AVAILABLE")) {

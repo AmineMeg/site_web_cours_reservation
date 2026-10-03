@@ -6,7 +6,7 @@ import { browserTimezone } from "@/lib/timezones";
 import { Notice } from "@/components/ui/Notice";
 
 export function LocationFields({ initial, preview = false, detectTimezone = true }: {
-  initial?: { country: string; city: string; timezone: string };
+  initial?: { country: string; timezone: string };
   preview?: boolean;
   detectTimezone?: boolean;
 }) {
@@ -30,20 +30,13 @@ export function LocationFields({ initial, preview = false, detectTimezone = true
     setTimezone(chosen);
   }, [initial?.timezone, preview, detectTimezone]);
   if (preview) return <div className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-2">
-      {[r.country, r.city].map((label) => <div key={label}><p className="label">{label} *</p><div className="input min-h-14" aria-hidden>{label === r.country ? "Brasil" : ""}</div></div>)}
-    </div>
+    <div><p className="label">{r.country} *</p><div className="input min-h-14" aria-hidden>Brasil</div></div>
     <p className="text-sm text-stone-600">{r.timezoneAutomatic}</p>
   </div>;
   return <fieldset disabled={preview} className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-2">
       <label className="label">{r.country} *
         <input name="country" required maxLength={100} defaultValue={initial?.country || "Brasil"} autoComplete="country-name" className="input mt-2" />
       </label>
-      <label className="label">{r.city} *
-        <input name="city" required maxLength={100} defaultValue={initial?.city} autoComplete="address-level2" className="input mt-2" />
-      </label>
-    </div>
     {detectTimezone ? <>
       <input type="hidden" name="timezone" value={timezone} />
       <p className="text-sm text-stone-600">{r.timezoneAutomatic}</p>

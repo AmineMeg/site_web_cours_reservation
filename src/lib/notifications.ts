@@ -13,12 +13,12 @@ function spaceAction(path: string, label: string) {
 
 /** All automatic emails of the app, in one place. */
 
-export function notifyTeacherNewContact(c: { name: string; email: string; phone: string; message: string; country?: string; city?: string; timezone?: string; trialWhen?: string }) {
+export function notifyTeacherNewContact(c: { name: string; email: string; phone: string; message: string; country?: string; timezone?: string; trialWhen?: string }) {
   return sendEmail({
     to: siteConfig.teacherEmail,
     subject: t.emails.newContact.subject(c.name),
     text: t.emails.newContact.body(c) + (c.trialWhen ? `\n\n${rules.trialBooked}\n${c.trialWhen}` : "") +
-      (c.timezone ? `\n\n${c.city}, ${c.country}\n${rules.timezone}: ${c.timezone}` : ""),
+      (c.timezone ? `\n\n${c.country ?? ""}\n${rules.timezone}: ${c.timezone}` : ""),
     replyTo: c.email,
     presentation: { title: e.newContact, preview: e.contactPreview, action: spaceAction("/admin/contacts", e.teacherSpace) },
   });

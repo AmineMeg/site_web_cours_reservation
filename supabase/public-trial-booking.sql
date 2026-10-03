@@ -1,6 +1,38 @@
 -- Run after trial-and-credit-rules.sql. Public calendar-first trials, without Auth accounts.
 begin;
 
+-- Retain the legacy city parameter/column without requiring it for new contacts.
+create or replace function public.issue_trial_link(
+  p_name text, p_email text, p_phone text, p_message text, p_country text, p_city text, p_timezone text, p_hash text
+)
+returns uuid language plpgsql security definer set search_path = ''
+as $$
+declare c public.contacts;
+begin
+  perform pg_advisory_xact_lock(hashtext('public.book_lesson'));
+  if p_country is null or length(btrim(p_country)) not between 1 and 100
+    or length(coalesce(p_city, '')) > 100
+    or not exists(select 1 from pg_timezone_names where name = p_timezone) then raise exception 'INVALID_LOCATION'; end if;
+  if exists(select 1 from public.profiles where lower(email) = lower(p_email) and role = 'student') then raise exception 'ALREADY_STUDENT'; end if;
+  select * into c from public.contacts where lower(email) = lower(p_email) and converted_at is null
+    order by created_at desc limit 1 for update;
+  if found then
+    if c.trial_declined_at is not null then raise exception 'TRIAL_DECLINED'; end if;
+    if exists(select 1 from public.trial_bookings where contact_id = c.id and status = 'booked') then raise exception 'TRIAL_ALREADY_BOOKED'; end if;
+    if exists(select 1 from public.trial_links where contact_id = c.id and expires_at > now()) then raise exception 'LINK_ALREADY_SENT'; end if;
+    update public.contacts set name = p_name, phone = p_phone, message = p_message,
+      country = p_country, city = case when coalesce(p_city, '') = '' then c.city else p_city end,
+      timezone = p_timezone, created_at = now() where id = c.id;
+  else
+    insert into public.contacts(name,email,phone,message,country,city,timezone)
+    values(p_name,lower(p_email),p_phone,p_message,p_country,coalesce(p_city, ''),p_timezone) returning * into c;
+  end if;
+  insert into public.trial_links(contact_id,token_hash,expires_at) values(c.id,p_hash,now() + interval '7 days')
+  on conflict(contact_id) do update set token_hash = excluded.token_hash, expires_at = excluded.expires_at;
+  return c.id;
+end;
+$$;
+
 create or replace function public.duration_slot_available(p_start timestamptz, p_minutes int, p_window_days int)
 returns boolean language plpgsql stable security definer set search_path = ''
 as $$

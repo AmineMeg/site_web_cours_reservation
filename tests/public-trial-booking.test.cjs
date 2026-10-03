@@ -107,7 +107,7 @@ test("30-day public trial booking is atomic, service-only, overlap-safe and keep
   const one = async (q, args = []) => (await db.query(q, args)).rows[0];
   const hash = () => randomBytes(32).toString("hex");
   const submit = (email, token, start) => one(
-    "select * from submit_trial_booking('Ana',$1,'123','Viajar','Brasil','Nova York','America/New_York',$2,$3)",
+    "select * from submit_trial_booking('Ana',$1,'123','Viajar','Brasil','','America/New_York',$2,$3)",
     [email, token, start]);
   try {
     await db.exec(PLATFORM);
@@ -176,6 +176,8 @@ test("30-day public trial booking is atomic, service-only, overlap-safe and keep
       const context = (await one("select trial_context($1) as context", [token])).context;
       assert.equal(context.booking.id, booking.id);
       assert.equal(context.contact.timezone, "America/New_York");
+      assert.equal(context.contact.country, "Brasil");
+      assert.equal(context.contact.city, "");
       assert.ok(!context.slots.some((s) => s.startsAt === slots[0].startsAt));
       assert.equal((await one("select extract(epoch from (l.expires_at-c.created_at)) as seconds from trial_links l join contacts c on c.id=l.contact_id where token_hash=$1", [token])).seconds, "604800.000000");
       await db.exec("reset role");
@@ -200,6 +202,8 @@ test("30-day public trial booking is atomic, service-only, overlap-safe and keep
       await one("select issue_trial_link('Ana','old@test.com','','','Brasil','NYC','America/New_York',$1)", [old]);
       const fresh = hash();
       await submit("old@test.com", fresh, slots[6].startsAt);
+      const updatedContact = (await one("select trial_context($1) as context", [fresh])).context.contact;
+      assert.equal(updatedContact.city, "NYC");
       await assert.rejects(db.query("select trial_context($1)", [old]), /LINK_EXPIRED/);
       await db.exec("reset role");
       await db.exec("create function fail_trial_test() returns trigger language plpgsql as $$ begin raise exception 'TEST_INSERT_FAILED'; end $$");

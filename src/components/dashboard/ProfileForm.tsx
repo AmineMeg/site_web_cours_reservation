@@ -9,7 +9,7 @@ import { t } from "@/lib/i18n";
 import type { ActionResult, Profile } from "@/lib/types";
 import { LocationFields } from "@/components/LocationFields";
 
-export function ProfileForm({ profile }: { profile: Pick<Profile, "full_name" | "email" | "phone" | "objectives" | "country" | "city" | "timezone"> }) {
+export function ProfileForm({ profile }: { profile: Pick<Profile, "full_name" | "email" | "phone" | "objectives" | "country" | "timezone"> }) {
   const p = t.dashboard.profile;
   const [state, action] = useActionState<ActionResult | null, FormData>(updateMyProfile, null);
 

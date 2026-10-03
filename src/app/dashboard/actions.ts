@@ -67,7 +67,7 @@ export async function cancelMyLesson(bookingId: string): Promise<ActionResult> {
 export async function updateMyProfile(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const { supabase, profile } = await requireStudent();
   const location = {
-    country: field(formData, "country"), city: field(formData, "city"), timezone: field(formData, "timezone"),
+    country: field(formData, "country"), timezone: field(formData, "timezone"),
   };
   if (!validLocation(location)) return { ok: false, message: r.locationError };
   // Only these columns can be changed by students (also enforced by a DB trigger).

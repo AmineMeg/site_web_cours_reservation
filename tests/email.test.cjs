@@ -91,6 +91,19 @@ test("every notification and security alert includes Portuguese presentation and
   assert.ok(cancellationHtml.includes("bgcolor="));
 });
 
+test("new contact notification shows country and timezone without collecting or displaying city", async () => {
+  const messages = [];
+  const notifications = mocked("src/lib/notifications.ts", {
+    "@/lib/email": { sendEmail: async (payload) => { messages.push(payload); return { ok: true }; } },
+    "@/lib/config": { siteConfig: { siteUrl: "https://example.com", teacherEmail: "teacher@example.com" } },
+    "@/lib/i18n": { t: pt },
+  });
+  await notifications.notifyTeacherNewContact({ name: "Ana", email: "ana@example.com", phone: "", message: "",
+    country: "Brasil", timezone: "America/Sao_Paulo", city: "Historical city" });
+  assert.match(messages[0].text, /Brasil\nFuso horário: America\/Sao_Paulo/);
+  assert.doesNotMatch(messages[0].text, /Historical city|undefined|Cidade/);
+});
+
 test("trial emails omit the 24-hour notice while regular confirmations retain it", async () => {
   const messages = [];
   const notifications = mocked("src/lib/notifications.ts", {
