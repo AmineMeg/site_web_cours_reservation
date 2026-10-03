@@ -68,7 +68,7 @@ test("every notification and security alert includes Portuguese presentation and
   for (const message of messages) {
     assert.ok(message.presentation.title);
     assert.ok(message.presentation.preview);
-    assert.match(renderEmailHtml(message.text, message.presentation), /Espanhol com a Professora Teixeira/);
+    assert.match(renderEmailHtml(message.text, message.presentation), /Espanhol com Eliane Teixeira/);
     assert.doesNotMatch(message.subject, /Your |New |Lesson |Security alert/);
   }
   assert.equal(messages[1].presentation.action.url, user.url);

@@ -7,8 +7,9 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Notice } from "@/components/ui/Notice";
 import { t } from "@/lib/i18n";
 import type { ActionResult, Profile } from "@/lib/types";
+import { LocationFields } from "@/components/LocationFields";
 
-export function ProfileForm({ profile }: { profile: Pick<Profile, "full_name" | "email" | "phone" | "objectives"> }) {
+export function ProfileForm({ profile }: { profile: Pick<Profile, "full_name" | "email" | "phone" | "objectives" | "country" | "city" | "timezone"> }) {
   const p = t.dashboard.profile;
   const [state, action] = useActionState<ActionResult | null, FormData>(updateMyProfile, null);
 
@@ -30,6 +31,7 @@ export function ProfileForm({ profile }: { profile: Pick<Profile, "full_name" | 
             <input id="phone" name="phone" type="tel" defaultValue={profile.phone} maxLength={40} className="input" />
           </div>
         </div>
+        <LocationFields initial={profile} />
         <div>
           <label htmlFor="objectives" className="label">🎯 {p.objectives}</label>
           <p className="mb-2 text-stone-600">{p.objectivesHelp}</p>

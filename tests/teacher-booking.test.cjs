@@ -43,7 +43,7 @@ function actionModule(requireTeacher, messages, invalidations) {
     if (name === "@/lib/notifications") return { sendBookingEmails: async (data) => { messages.push(data); return { ok: false }; } };
     if (name === "@/lib/utils") return {};
     if (name === "@/lib/i18n") return { t: pt };
-    if (["@/lib/supabase/admin", "@/lib/email", "@/lib/auth-links", "@/lib/verify-password"].includes(name)) return {};
+    if (["@/lib/supabase/admin", "@/lib/email", "@/lib/auth-links", "@/lib/verify-password", "@/lib/trial"].includes(name)) return {};
     if (name.startsWith("@/")) return load(`src/${name.slice(2)}.ts`);
     return require(name);
   };

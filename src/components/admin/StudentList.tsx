@@ -9,7 +9,7 @@ import type { Profile } from "@/lib/types";
 
 type Row = Pick<Profile, "id" | "full_name" | "email" | "phone" | "credits" | "is_active">;
 
-export function StudentList({ students }: { students: Row[] }) {
+export function StudentList({ students, validityMonths }: { students: Row[]; validityMonths: number }) {
   const s = t.admin.students;
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -31,7 +31,7 @@ export function StudentList({ students }: { students: Row[] }) {
       )}
       <ul className="space-y-4">
         {active.map((st) => (
-          <StudentRow key={st.id} student={st} />
+          <StudentRow key={st.id} student={st} validityMonths={validityMonths} />
         ))}
       </ul>
       {paused.length > 0 && (
@@ -41,7 +41,7 @@ export function StudentList({ students }: { students: Row[] }) {
           </summary>
           <ul className="mt-4 space-y-4">
             {paused.map((st) => (
-              <StudentRow key={st.id} student={st} />
+              <StudentRow key={st.id} student={st} validityMonths={validityMonths} />
             ))}
           </ul>
         </details>
@@ -50,7 +50,7 @@ export function StudentList({ students }: { students: Row[] }) {
   );
 }
 
-function StudentRow({ student }: { student: Row }) {
+function StudentRow({ student, validityMonths }: { student: Row; validityMonths: number }) {
   return (
     <li className="card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 space-y-1">
@@ -66,7 +66,7 @@ function StudentRow({ student }: { student: Row }) {
           {t.admin.students.openProfile} →
         </Link>
       </div>
-      <CreditControl studentId={student.id} initialCredits={student.credits} />
+      <CreditControl studentId={student.id} initialCredits={student.credits} validityMonths={validityMonths} />
     </li>
   );
 }

@@ -28,7 +28,11 @@ test("Brazilian dictionary covers every core key and all homepage migration text
   assert.equal(defaultSettings.timezone, tz);
   assert.deepEqual(parseHomepageContent(migratedContent), { ...migratedContent, heroImage: "", teacherImage: "" });
   const { heroImage, teacherImage, ...textDefaults } = homepageDefaults;
-  assert.deepEqual(migratedContent, { ...textDefaults, teacherName: "Professora Teixeira" });
+  const updatedKeys = ["siteName", "teacherName", "footerText", "aboutParagraph1", "heroBadge", "contactSubtitle"];
+  for (const [key, value] of Object.entries(textDefaults)) {
+    if (!updatedKeys.includes(key)) assert.equal(migratedContent[key], value);
+  }
+  assert.equal(homepageDefaults.teacherName, "Eliane Teixeira");
   assert.match(t.emails.credentials.body({ name: "Ana", email: "ana@test.com", url: "https://example.com" }), /Olá, Ana/);
   assert.match(t.common.timezoneNote(tz), /Belo Horizonte/);
 });
@@ -89,6 +93,12 @@ test("localization migration replaces stored homepage, changes timezone and pres
     const home = await one("select content,revision from website_content");
     assert.equal(home.revision, 8);
     assert.deepEqual(home.content, migratedContent);
+    await db.exec(fs.readFileSync(path.join(root, "supabase/eliane-teixeira.sql"), "utf8"));
+    const eliane = await one("select content,revision from website_content");
+    const { heroImage: ignoredHero, teacherImage: ignoredTeacher, ...currentDefaults } = homepageDefaults;
+    assert.deepEqual(eliane.content, currentDefaults);
+    await db.exec(fs.readFileSync(path.join(root, "supabase/eliane-teixeira.sql"), "utf8"));
+    assert.equal((await one("select revision from website_content")).revision, eliane.revision);
     assert.deepEqual(await one("select starts_at,ends_at from bookings"), before);
     const column = await one("select column_default from information_schema.columns where table_schema='public' and table_name='app_settings' and column_name='timezone'");
     assert.match(column.column_default, /America\/Sao_Paulo/);
@@ -116,8 +126,10 @@ test("localization migration replaces stored homepage, changes timezone and pres
     assert.equal(renamed.content.teacherName, "Professora Teixeira");
     assert.equal(renamed.content.aboutParagraph1, "Olá! Sou a Professora Teixeira.");
     assert.equal(renamed.content.heroTitle, oldContent.heroTitle);
-    assert.equal(renamed.revision, 9);
+    assert.equal(renamed.revision, eliane.revision + 1);
     await db.exec(renameSql);
     assert.deepEqual(await one("select content,revision from website_content"), renamed);
+    await db.exec(fs.readFileSync(path.join(root, "supabase/eliane-teixeira.sql"), "utf8"));
+    assert.equal((await one("select content from website_content")).content.heroTitle, oldContent.heroTitle);
   } finally { await db.close(); }
 });

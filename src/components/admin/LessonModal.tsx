@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cancelLesson } from "@/app/admin/actions";
+import { cancelLesson, cancelTrialByTeacher } from "@/app/admin/actions";
 import { Modal } from "@/components/ui/Modal";
 import { Notice } from "@/components/ui/Notice";
 import { buttonClass } from "@/components/ui/button";
 import { t } from "@/lib/i18n";
 import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 import type { ActionResult, StudentCard } from "@/lib/types";
+import { lessonRules as r } from "@/lib/i18n/lesson-rules";
 
 export interface LessonItem {
   id: string;
@@ -15,6 +16,7 @@ export interface LessonItem {
   whenLabel: string;
   student: StudentCard | null;
   creditsUsed: number;
+  kind?: "trial";
 }
 
 export function LessonModal({ lesson, onClose }: { lesson: LessonItem | null; onClose: () => void }) {
@@ -33,7 +35,7 @@ export function LessonModal({ lesson, onClose }: { lesson: LessonItem | null; on
 
   const confirmCancel = () =>
     startTransition(async () => {
-      setResult(await cancelLesson(lesson!.id, message));
+      setResult(await (lesson!.kind === "trial" ? cancelTrialByTeacher(lesson!.id, message) : cancelLesson(lesson!.id, message)));
     });
 
   const student = lesson?.student;
@@ -64,8 +66,9 @@ export function LessonModal({ lesson, onClose }: { lesson: LessonItem | null; on
             )}
             <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-stone-500">{m.objectives}</p>
             <p className="whitespace-pre-line text-lg">{student?.objectives || m.noObjectives}</p>
-            {student && <p className="mt-3 text-stone-600">{t.common.credits(student.credits)}</p>}
-            <p className="mt-2 font-semibold">{lesson.creditsUsed === 0 ? tb.giftLabel : tb.creditLabel}</p>
+            {student?.timezone && <p className="mt-3 text-stone-600">{r.timezone}: {student.timezone}</p>}
+            {student && lesson.kind !== "trial" && <p className="mt-3 text-stone-600">{t.common.credits(student.credits)}</p>}
+            <p className="mt-2 font-semibold">{lesson.kind === "trial" ? r.trialLabel : lesson.creditsUsed === 0 ? tb.giftLabel : tb.creditLabel}</p>
           </section>
           <button type="button" onClick={() => setStep("confirm")} className={buttonClass("danger", "xl", "w-full")}>
             ❌ {m.cancelClass}

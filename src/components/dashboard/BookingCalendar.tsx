@@ -41,7 +41,7 @@ export function BookingCalendar({
     });
 
   if (credits < 1) {
-    return <Notice ok={false}>{b.noCredits}</Notice>;
+    return <div className="space-y-3">{result && <Notice ok={result.ok}>{result.message}</Notice>}<Notice ok={false}>{b.noCredits}</Notice></div>;
   }
 
   if (slots.length === 0) {

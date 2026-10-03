@@ -1,5 +1,5 @@
 export const emailText = {
-  brand: "Espanhol com a Professora Teixeira",
+  brand: "Espanhol com Eliane Teixeira",
   brandCategory: "Suas aulas de espanhol",
   hello: (name: string) => name ? `Olá, ${name}!` : "Olá!",
   bookingIntro: "Está tudo pronto para a sua próxima aula. Confira os detalhes abaixo e acesse sua agenda quando precisar.",

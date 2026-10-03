@@ -6,8 +6,8 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 export const pt: Dictionary = {
   locale: "pt-BR",
   common: {
-    appName: "Espanhol com a Professora Teixeira",
-    footerText: "Espanhol com a Professora Teixeira. Todos os direitos reservados.",
+    appName: "Espanhol com Eliane Teixeira",
+    footerText: "Espanhol com Eliane Teixeira. Todos os direitos reservados.",
     save: "Salvar", saving: "Salvando…", cancel: "Cancelar", close: "Fechar", back: "Voltar",
     signOut: "Sair", error: "Algo deu errado. Tente novamente.",
     notAllowed: "Você não tem permissão para fazer isso.",
@@ -24,7 +24,7 @@ export const pt: Dictionary = {
   nav: { blog: "Blog", about: "Sobre mim", testimonials: "Depoimentos", contact: "Contato", login: "Área do aluno" },
   landing: {
     hero: {
-      badge: "Aulas de espanhol online e presenciais",
+      badge: "Aulas de espanhol online, em qualquer lugar do mundo",
       title: "Fale espanhol com confiança desde a primeira aula",
       subtitle: "Aulas acolhedoras e personalizadas com uma professora nativa experiente. Aprenda no seu ritmo, para viajar, trabalhar, fazer provas ou pelo prazer de aprender.",
       ctaPrimary: "Comece a aprender", ctaSecondary: "Conheça sua professora",
@@ -33,7 +33,7 @@ export const pt: Dictionary = {
       title: "Conheça sua professora",
       role: "Professora nativa de espanhol · Mais de 20 anos de experiência",
       paragraphs: [
-        "¡Hola! Sou a Professora Teixeira. Nasci em Salamanca, na Espanha, e ensino espanhol há mais de vinte anos. Nesse tempo, tive a alegria de acompanhar mais de mil alunos, de iniciantes a profissionais com uma rotina corrida, ajudando cada um a falar espanhol com confiança.",
+        "¡Hola! Sou Eliane Teixeira. Nasci em Salamanca, na Espanha, e ensino espanhol há mais de vinte anos. Nesse tempo, tive a alegria de acompanhar mais de mil alunos, de iniciantes a profissionais com uma rotina corrida, ajudando cada um a falar espanhol com confiança.",
         "Minhas aulas são acolhedoras, pacientes e feitas para você. Conversamos desde o primeiro dia, e a gramática e o vocabulário aparecem naturalmente, passo a passo. Seja para uma viagem, uma prova (DELE / SIELE), um novo trabalho ou para conversar com familiares e amigos que falam espanhol, vamos criar um plano a partir dos seus objetivos.",
         "Acredito que aprender um idioma deve ser como uma conversa entre amigos: leve, encorajadora e cheia de boas risadas. Estou ansiosa para conhecer você!",
       ],
@@ -54,14 +54,14 @@ export const pt: Dictionary = {
     contact: {
       title: "Entre em contato para começar",
       company: "Empresa",
-      subtitle: "Conte um pouco sobre você e seus objetivos. Responderei em até 48 horas para planejarmos sua primeira aula.",
+      subtitle: "Conte um pouco sobre você e agende uma aula experimental online gratuita de 30 minutos.",
       name: "Seu nome", email: "Seu e-mail", phone: "Seu telefone", message: "Mensagem",
       messagePlaceholder: "Ex.: Sou iniciante e quero viajar para a Espanha nas próximas férias.",
       submit: "Enviar meu pedido", sending: "Enviando…",
       success: "Obrigada! Sua mensagem foi enviada. Entrarei em contato em breve.",
       errors: { name: "Informe seu nome.", email: "Informe um e-mail válido.", phone: "Este telefone é muito longo.", message: "Sua mensagem é muito longa (máximo de 2.000 caracteres)." },
     },
-    footer: { rights: (year) => `© ${year} Espanhol com a Professora Teixeira. Todos os direitos reservados.` },
+    footer: { rights: (year) => `© ${year} Espanhol com Eliane Teixeira. Todos os direitos reservados.` },
   },
   login: {
     title: "Bem-vindo de volta", subtitle: "Entre para agendar suas aulas.",
@@ -75,9 +75,9 @@ export const pt: Dictionary = {
     title: "Área da professora",
     nav: { contacts: "Novos contatos", students: "Meus alunos", schedule: "Minha agenda", messages: "Mensagens", website: "Ver meu site" },
     contacts: {
-      title: "Novos contatos", intro: "Pessoas que querem aprender com você. Clique no botão verde para criar uma conta de aluno.",
+      title: "Novos contatos", intro: "Acompanhe as aulas experimentais gratuitas de 30 minutos. A partir do início da aula experimental, decida se deseja criar a conta do aluno.",
       empty: "Nenhum novo contato por enquanto. 🌿", received: (date) => `Recebido em ${date}`,
-      autoDelete: (days) => `Será excluído automaticamente em ${days} ${plural(days, "dia", "dias")} se nenhuma conta for criada.`,
+      autoDelete: (days) => `Será excluído automaticamente após ${days} ${plural(days, "dia", "dias")} se não houver aula experimental nem link de agendamento válido.`,
       noMessage: "(Sem mensagem)", createAccount: "Criar conta de aluno", creating: "Criando conta…",
       created: (name) => `Pronto! ${name} agora é seu aluno. Um link seguro de ativação foi enviado por e-mail.`,
       emailExists: "Já existe uma conta de aluno com este e-mail.", remove: "Remover",
@@ -176,20 +176,20 @@ export const pt: Dictionary = {
   },
   emails: {
     newContact: {
-      subject: (name) => `Novo aluno interessado: ${name} | Professora Teixeira`,
-      body: (c) => `Alguém quer aprender espanhol com você!\n\nNome: ${c.name}\nE-mail: ${c.email}\nTelefone: ${c.phone || "-"}\n\nMensagem:\n${c.message || "-"}\n\nAbra a área da professora para criar a conta do aluno.`,
+      subject: (name) => `Novo aluno interessado: ${name} | Eliane Teixeira`,
+      body: (c) => `Alguém quer aprender espanhol com você!\n\nNome: ${c.name}\nE-mail: ${c.email}\nTelefone: ${c.phone || "-"}\n\nMensagem:\n${c.message || "-"}\n\nO contato recebeu um link para agendar uma aula experimental gratuita de 30 minutos. Acompanhe o agendamento na área da professora. Você poderá decidir sobre a criação da conta quando a aula experimental começar.`,
     },
     credentials: {
       subject: "Boas-vindas! Ative sua conta de espanhol",
       body: (p) => `Olá, ${p.name}!\n\nBoas-vindas! Sua conta de aluno está pronta.\n\nAtive sua conta e escolha sua senha:\n${p.url}\n\nSeu e-mail de acesso: ${p.email}\n\nEste link tem prazo de validade e só pode ser usado uma vez. Depois, entre com seu e-mail e senha. Nunca compartilhe o link ou sua senha.\n\nAté breve!`,
     },
     passwordReset: {
-      subject: "Seu link seguro para redefinir a senha | Professora Teixeira",
+      subject: "Seu link seguro para redefinir a senha | Eliane Teixeira",
       body: (p) => `${p.name ? `Olá, ${p.name}!` : "Olá!"}\n\nRecebemos um pedido para redefinir a senha da sua conta de aulas de espanhol.\n\nUse este link seguro para escolher uma nova senha:\n${p.url}\n\nEste link tem prazo de validade e só pode ser usado uma vez. Não o compartilhe. Se você não pediu esta alteração, ignore este e-mail: sua senha permanece a mesma.\n\nAté breve!`,
     },
     cancellation: {
       subject: (when) => `Aula cancelada: ${when} — crédito devolvido`,
-      body: (p) => `Olá, ${p.name}!\n\nSua aula de ${p.when} foi cancelada pela professora.\n\nMensagem da professora:\n"${p.message}"\n\n${p.refundedCredits === 0 ? teacherBookingText.giftCancellationBody : "Seu crédito foi devolvido. Você pode agendar uma nova aula quando quiser."}\n\nAté breve!`,
+      body: (p) => `Olá, ${p.name}!\n\nSua aula de ${p.when} foi cancelada pela professora.\n\nMensagem da professora:\n"${p.message}"\n\n${p.refundedCredits === 0 ? teacherBookingText.giftCancellationBody : "Seu crédito foi devolvido com a validade original. Consulte a data de validade na sua agenda."}\n\nAté breve!`,
     },
     bookingConfirmation: {
       subject: (when) => `Aula de espanhol confirmada: ${when}`,

@@ -1,12 +1,15 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { notifyTeacherNewContact } from "@/lib/notifications";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyTeacherNewContact, sendTrialInvitation } from "@/lib/notifications";
+import { newTrialToken } from "@/lib/trial";
+import { limitTrialContact } from "@/lib/security/rate-limit";
+import { validLocation } from "@/lib/timezones";
+import { lessonRules as r } from "@/lib/i18n/lesson-rules";
 import { EMAIL_REGEX, field } from "@/lib/utils";
 import { t } from "@/lib/i18n";
-import { accountText } from "@/lib/i18n/account";
 
-type FieldName = "name" | "email" | "phone" | "message";
+type FieldName = "name" | "email" | "phone" | "message" | "location";
 
 export interface ContactFormState {
   status: "idle" | "success" | "error";
@@ -25,6 +28,9 @@ export async function submitContact(_prev: ContactFormState, formData: FormData)
     email: field(formData, "email").toLowerCase(),
     phone: field(formData, "phone"),
     message: field(formData, "message"),
+    country: field(formData, "country"),
+    city: field(formData, "city"),
+    timezone: field(formData, "timezone"),
   };
 
   const e = t.landing.contact.errors;
@@ -33,20 +39,28 @@ export async function submitContact(_prev: ContactFormState, formData: FormData)
   if (!EMAIL_REGEX.test(data.email) || data.email.length > 254) errors.email = e.email;
   if (data.phone.length > 40) errors.phone = e.phone;
   if (data.message.length > 2000) errors.message = e.message;
+  if (!validLocation(data)) errors.location = r.locationError;
   if (Object.keys(errors).length > 0) {
     return { status: "error", message: Object.values(errors)[0]!, errors };
   }
 
-  // 1) Save in the `contacts` table (allowed for anonymous visitors by RLS, insert only).
-  const supabase = await createClient();
-  const { error } = await supabase.from("contacts").insert(data);
+  if (!await limitTrialContact(data.email)) return { status: "error", message: r.tooMany };
+  const { token, hash } = newTrialToken();
+  const { error } = await createAdminClient().rpc("issue_trial_link", {
+    p_name: data.name, p_email: data.email, p_phone: data.phone, p_message: data.message,
+    p_country: data.country, p_city: data.city, p_timezone: data.timezone, p_hash: hash,
+  });
   if (error) {
-    console.error("[contact] insert failed", error);
+    if (["ALREADY_STUDENT", "TRIAL_DECLINED", "TRIAL_ALREADY_BOOKED", "LINK_ALREADY_SENT"].some((code) => error.message.includes(code))) {
+      return { status: "error", message: r.duplicate };
+    }
+    console.error("[contact] Trial issuance failed", error.code);
     return { status: "error", message: t.common.error };
   }
 
-  // 2) Tell the teacher (email placeholder, see src/lib/email.ts).
-  const delivery = await notifyTeacherNewContact(data);
-
-  return { status: "success", message: delivery.ok ? t.landing.contact.success : accountText.savedWithoutEmail };
+  const [delivery] = await Promise.all([
+    sendTrialInvitation({ name: data.name, email: data.email, token }),
+    notifyTeacherNewContact(data),
+  ]);
+  return { status: "success", message: delivery.ok ? r.sent : r.savedWithoutEmail };
 }

@@ -6,6 +6,7 @@ import { DaysOffCalendar } from "@/components/admin/DaysOffCalendar";
 import { AddLessonButton, type BookingStudent } from "@/components/admin/AddLessonButton";
 import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 import { PageTitle } from "@/components/ui/Notice";
+import { CreditValiditySettings } from "@/components/admin/CreditValiditySettings";
 import {
   addDaysKey,
   dayKeyOf,
@@ -17,7 +18,7 @@ import {
   todayKey,
 } from "@/lib/dates";
 import { t } from "@/lib/i18n";
-import type { BlockedSlot, BookingWithStudent, WeeklyAvailability } from "@/lib/types";
+import type { BlockedSlot, BookingWithStudent, WeeklyAvailability, TrialBooking, Contact } from "@/lib/types";
 
 type View = "lessons" | "hours" | "daysoff";
 
@@ -58,12 +59,19 @@ export default async function SchedulePage({
 
     const { data } = await supabase
       .from("bookings")
-      .select("*, student:profiles(id, full_name, email, phone, objectives, credits)")
+      .select("*, student:profiles(id, full_name, email, phone, objectives, credits, timezone)")
       .eq("status", "booked")
       .gte("starts_at", from)
       .lt("starts_at", to)
       .order("starts_at");
     const bookings = (data ?? []) as BookingWithStudent[];
+    const { data: trialData, error: trialError } = await supabase.from("trial_bookings")
+      .select("*, contact:contacts(*)").eq("status", "booked").gte("starts_at", from).lt("starts_at", to).order("starts_at");
+    if (trialError) {
+      console.error("[admin] Trial schedule unavailable", trialError.code);
+      throw new Error(t.common.error);
+    }
+    const trials = (trialData ?? []) as (TrialBooking & { contact: Contact })[];
 
     const days: CalendarDay[] = Array.from({ length: 7 }, (_, i) => {
       const key = addDaysKey(monday, i);
@@ -71,7 +79,7 @@ export default async function SchedulePage({
         key,
         label: formatDayKey(key, { weekday: "long", day: "numeric", month: "short" }),
         isToday: key === today,
-        lessons: bookings
+        lessons: [...bookings
           .filter((b) => dayKeyOf(b.starts_at, tz) === key)
           .map((b) => ({
             id: b.id,
@@ -79,7 +87,13 @@ export default async function SchedulePage({
             timeLabel: `${formatTime(b.starts_at, tz)} – ${formatTime(b.ends_at, tz)}`,
             whenLabel: formatDateTime(b.starts_at, tz),
             student: b.student,
-          })),
+          })), ...trials.filter((trial) => dayKeyOf(trial.starts_at, tz) === key).map((trial) => ({
+            id: trial.id, kind: "trial" as const, creditsUsed: 0,
+            timeLabel: `${formatTime(trial.starts_at, tz)} – ${formatTime(trial.ends_at, tz)}`,
+            whenLabel: formatDateTime(trial.starts_at, tz),
+            student: { id: trial.contact.id, full_name: trial.contact.name, email: trial.contact.email,
+              phone: trial.contact.phone, objectives: trial.contact.message, credits: 0, timezone: trial.contact.timezone },
+          }))].sort((a, b) => a.timeLabel.localeCompare(b.timeLabel)),
       };
     });
 
@@ -93,16 +107,22 @@ export default async function SchedulePage({
     if (view === "hours") {
       content = <WeeklyHoursEditor initial={weekly} />;
     } else {
-      const [{ data: blockedData }, { data: lessonData }] = await Promise.all([
+      const [{ data: blockedData }, { data: lessonData }, { data: trialData, error: trialError }] = await Promise.all([
         supabase.from("blocked_slots").select("id, day, start_time, end_time").gte("day", today).order("day"),
         supabase
           .from("bookings")
           .select("starts_at")
           .eq("status", "booked")
           .gte("starts_at", localToUtc(today, 0, tz).toISOString()),
+        supabase.from("trial_bookings").select("starts_at").eq("status", "booked")
+          .gte("starts_at", localToUtc(today, 0, tz).toISOString()),
       ]);
+      if (trialError) {
+        console.error("[admin] Trial day counts unavailable", trialError.code);
+        throw new Error(t.common.error);
+      }
       const lessonCounts: Record<string, number> = {};
-      for (const b of lessonData ?? []) {
+      for (const b of [...(lessonData ?? []), ...(trialData ?? [])]) {
         const key = dayKeyOf(b.starts_at as string, tz);
         lessonCounts[key] = (lessonCounts[key] ?? 0) + 1;
       }
@@ -121,6 +141,7 @@ export default async function SchedulePage({
   return (
     <>
       <PageTitle title={s.title} intro={t.common.timezoneNote(tz)} />
+      {view === "hours" && <CreditValiditySettings initial={settings.credit_validity_months} />}
       <div className="mb-6">
         <AddLessonButton students={students} today={today} timezone={tz} lessonMinutes={settings.lesson_minutes} initialStudentId={initialStudentId} />
       </div>

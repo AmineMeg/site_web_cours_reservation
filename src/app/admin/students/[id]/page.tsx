@@ -8,6 +8,8 @@ import { AddLessonButton } from "@/components/admin/AddLessonButton";
 import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 import { t } from "@/lib/i18n";
 import type { Booking, Profile } from "@/lib/types";
+import { CreditExpiryList } from "@/components/CreditExpiryList";
+import type { CreditBatch } from "@/lib/types";
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -28,6 +30,13 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   if (!student) notFound();
   const profile = student as Profile;
   const upcoming = (lessons ?? []) as Booking[];
+  const { data: batchData, error: batchError } = await supabase.from("credit_batches")
+    .select("id,remaining,expires_at").eq("student_id", id).gt("remaining", 0)
+    .gt("expires_at", new Date().toISOString()).order("expires_at");
+  if (batchError) {
+    console.error("[admin] Credit batches unavailable", batchError.code);
+    throw new Error(t.common.error);
+  }
 
   return (
     <>
@@ -39,7 +48,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <StudentEditForm student={profile} />
         <div className="space-y-6">
-          <CreditControl studentId={profile.id} initialCredits={profile.credits} />
+          <CreditControl studentId={profile.id} initialCredits={profile.credits} validityMonths={settings.credit_validity_months} />
+          <CreditExpiryList batches={(batchData ?? []) as CreditBatch[]} timezone={profile.timezone} />
           {profile.is_active && <AddLessonButton students={[profile]} today={todayKey(settings.timezone)}
             timezone={settings.timezone} lessonMinutes={settings.lesson_minutes} initialStudentId={profile.id} />}
           <div className="card">

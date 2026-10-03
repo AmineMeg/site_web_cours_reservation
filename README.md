@@ -54,7 +54,7 @@ src/
 
 **Security model** – business rules live in Postgres so they cannot be bypassed from the browser:
 
-- Row Level Security: anonymous visitors can only *insert* contacts; students only read/edit their own row;
+- Row Level Security: anonymous visitors submit contacts through a rate-limited server action; students only read/edit their own row;
   the teacher can manage everything.
 - Booking, cancelling and credit changes only go through `security definer` functions
   (`book_lesson`, `cancel_lesson`, `adjust_credits`) which check credits, slot availability, double-booking
@@ -68,6 +68,9 @@ src/
 1. **Supabase**: create a free project at <https://supabase.com>.
 2. **Database**: *SQL Editor* → paste the content of [`supabase/schema.sql`](supabase/schema.sql) → *Run*.
    (If pg_cron is not enabled, enable it in *Database → Extensions* and run the script again; it is safe to re-run.)
+   Then run the feature migrations in order: `student-password-login.sql`,
+   `website.sql`, `blog.sql`, `homepage-images.sql`, `student-reviews.sql`,
+   `teacher-booking.sql`, **`trial-and-credit-rules.sql` last**, and `eliane-teixeira.sql`.
 3. **Auth settings**: *Authentication → Sign In / Providers* → turn **off** "Allow new users to sign up"
    (only the teacher creates student accounts).
 4. **Teacher account**: *Authentication → Users → Add user* (email + password, "Auto confirm"), then in the SQL editor:
@@ -253,15 +256,17 @@ It updates both the timezone default and the existing settings row and **replace
 all homepage text with the Portuguese version**, as requested. Back up
 `website_content` first. Its revision increases so already-open editors cannot
 overwrite it. Do not rerun it after customizing the translated homepage.
-The teacher name is Professora Teixeira; adjust it in the homepage editor.
+The current teacher name is Eliane Teixeira; adjust it in the homepage editor.
 
 For a homepage already saved with the old María name, run
 [`supabase/professora-teixeira.sql`](supabase/professora-teixeira.sql) instead of
 rerunning the full Portuguese migration. It replaces the old name in saved homepage
 strings while preserving other text and increasing the revision only when changed.
-Update `NEXT_PUBLIC_TEACHER_NAME=Professora Teixeira` in Vercel as well;
+Update `NEXT_PUBLIC_TEACHER_NAME=Eliane Teixeira` in Vercel as well;
 existing environment values override the code default. Keep the verified address
-in `EMAIL_FROM`, changing only its display name to `Professora Teixeira`.
+in `EMAIL_FROM`, changing only its display name to `Eliane Teixeira`.
+The former `professora-teixeira.sql` rename is a historical migration; run
+`eliane-teixeira.sql` afterward for the current identity.
 This branding change does not rename Auth accounts or rewrite blog articles.
 
 Belo Horizonte uses `America/Sao_Paulo` (currently Brasília time, UTC−3).
@@ -389,9 +394,9 @@ migration rather than manually opening storage uploads to the public.
 
 ### Teacher-created lessons
 
-Run [`supabase/teacher-booking.sql`](supabase/teacher-booking.sql) **last**, after the
+Run [`supabase/teacher-booking.sql`](supabase/teacher-booking.sql), after the
 base, security and student-login scripts, before deploying this feature. Reapply
-it last if you rerun the older security/base scripts: it replaces cancellation
+it if you rerun the older security/base scripts, followed by the trial/credit migration below: it replaces cancellation
 logic so a free lesson never creates a refunded credit. Existing lessons retain
 their original one-credit cost.
 
@@ -409,6 +414,85 @@ Database locking serializes teacher and student bookings, credit use is atomic,
 and retries of the same request do not consume another credit or send another email.
 Gifted lessons are labelled **Aula oferecida**. Cancelling one changes no credits;
 cancelling a charged lesson refunds exactly the credit used, only once.
+
+### Free trials, expiring credits and worldwide lessons
+
+Before deploying this version:
+
+Apply the database migration and deploy the application in a coordinated maintenance
+window. The previous contact form used anonymous inserts and immediate account
+creation; do not use that older form or create accounts between migration and deployment.
+
+1. Run [`supabase/trial-and-credit-rules.sql`](supabase/trial-and-credit-rules.sql)
+   **last**, after the base schema, security, student-password-login, teacher-booking
+   and student-reviews migrations. Reapply it last if any older script is rerun.
+2. Run [`supabase/eliane-teixeira.sql`](supabase/eliane-teixeira.sql) after the
+   website migration to rename the former default identity to **Eliane Teixeira**.
+   It preserves photos, custom text not containing the former name and actual reviews.
+3. Set `NEXT_PUBLIC_TEACHER_NAME=Eliane Teixeira` and update only the display name
+   of `EMAIL_FROM`, retaining the verified sending address. Ensure
+   `NEXT_PUBLIC_SITE_URL=https://professora-teixeira.site`, email credentials and
+   `SECURITY_SECRET` are configured, then deploy.
+
+**Contact to student:** the contact form requires country, city and an IANA timezone
+(browser-detected, editable). It creates no Supabase Auth user. It sends the contact
+a bearer link to `/trial/<token>`, valid for exactly seven days, and notifies Eliane.
+Only SHA-256 hashes of random 256-bit tokens are stored; trial RPCs are server-only,
+the page is not indexed and uses a no-referrer policy. The link grants access only
+to that contact's trial, never to the student portal or other contacts. Contact
+submissions are rate-limited by normalized email and trusted client IP.
+Trial booking/cancellation changes are also limited to ten attempts per link per hour.
+
+The contact can reserve **one active, free, 30-minute online trial**, using the
+teacher's working hours, blocks, notice and booking window. The seven-day limit
+applies to using the link, not to the date of the trial. Trials and regular lessons
+share the same transaction lock and overlap checks, including exceptional teacher
+bookings. No credits are consumed. Both parties receive timezone-specific emails.
+An expired link cannot be used to book or cancel, even if already bookmarked;
+Eliane can send a replacement link from the contact card, invalidating the old one.
+Email failures are reported explicitly; a failed email never undoes a saved booking.
+
+The contact remains in **Novos contatos**, labelled with their trial time. Starting
+at the trial's **start time** (not its end), Eliane may create the student account
+or choose **Não criar conta**. Approval is checked again against database time before
+creating an Auth user and when marking the contact converted. Refusal disables trial
+access. New accounts receive the existing activation email and start with zero credits.
+Contacts with trial history are retained for teacher decisions; the 30-day cleanup
+only removes unconverted contacts without trial history or a currently valid link.
+Existing contacts need a trial link/booking before they can be converted.
+
+**Credit validity:** each positive credit adjustment creates a separate batch.
+Default validity is **12 calendar months from the addition**. Eliane can change it
+in **Minha agenda → Horários da semana** (1–120 months); only subsequent additions
+are affected. A lesson must **finish on or before** its batch's expiry. Booking
+uses the earliest-expiring eligible batch, atomically, and unavailable/expired
+credits are excluded from the balance and selectable lesson times.
+Both teacher and student profiles show exact expiry dates/times. Existing available
+credits receive twelve months from the first migration execution, not from unknown
+historical purchase dates. Existing charged bookings get a refundable legacy batch;
+rerunning the migration neither refills batches nor resets their expiry.
+
+**Cancellation:** students and trial contacts can cancel at least **24 hours before**
+the start (exactly 24 hours is permitted); below that threshold the database refuses.
+Cancelled trials may be rebooked with the same link only before its expiry. Eliane
+can always cancel, with a message. Charged lessons return their original credit
+to its original batch **without extending its expiry**; an expired refunded credit
+does not reappear in the available balance. Gifts and trials never generate credits.
+Rules are shown on the public page, trial page, booking page and credit controls.
+
+**Timezones:** weekly hours, blocks and Eliane's calendar retain the teacher's zone
+(`America/Sao_Paulo` by default). Student calendars regroup slots by the student's
+local date, even across midnight. Students and Eliane can edit the student's
+location/timezone. Date-specific UTC offsets in confirmations handle daylight
+saving time; ambiguous/nonexistent transition-crossing slots are not offered.
+Existing profiles default to the former teacher zone until their location is updated.
+
+Targeted validation:
+```powershell
+node --test tests\trial-credit-rules.test.cjs tests\trial-workflow.test.cjs
+npm run typecheck
+```
+Set `PGLITE_PATH` as described below to actually execute database tests.
 
 The visual editor supports headings, bold/italic text, lists and uploaded images.
 Its formatting toolbar stays visible while scrolling through the article.

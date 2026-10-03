@@ -3,6 +3,11 @@ import { cache } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import { homepageDefaults, parseHomepageContent } from "@/lib/website-content";
+import { getSettings } from "@/lib/auth";
+
+export const getPublicSettings = cache(async () => getSettings(createClient(supabaseUrl(), supabaseAnonKey(), {
+  auth: { persistSession: false, autoRefreshToken: false },
+})));
 
 export const getHomepage = cache(async () => {
   // Public content must not depend on a visitor's incomplete MFA session.

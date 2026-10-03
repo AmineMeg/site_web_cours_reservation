@@ -5,6 +5,7 @@ import { t } from "@/lib/i18n";
 import { emailText as e } from "@/lib/i18n/email";
 import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
 import { reviewText as r } from "@/lib/i18n/reviews";
+import { lessonRules as rules } from "@/lib/i18n/lesson-rules";
 
 function spaceAction(path: string, label: string) {
   return { label, url: new URL(path, siteConfig.siteUrl).href };
@@ -12,11 +13,11 @@ function spaceAction(path: string, label: string) {
 
 /** All automatic emails of the app, in one place. */
 
-export function notifyTeacherNewContact(c: { name: string; email: string; phone: string; message: string }) {
+export function notifyTeacherNewContact(c: { name: string; email: string; phone: string; message: string; country?: string; city?: string; timezone?: string }) {
   return sendEmail({
     to: siteConfig.teacherEmail,
     subject: t.emails.newContact.subject(c.name),
-    text: t.emails.newContact.body(c),
+    text: t.emails.newContact.body(c) + (c.timezone ? `\n\n${c.city}, ${c.country}\n${rules.timezone}: ${c.timezone}` : ""),
     replyTo: c.email,
     presentation: { title: e.newContact, preview: e.contactPreview, action: spaceAction("/admin/contacts", e.teacherSpace) },
   });
@@ -42,29 +43,31 @@ export function sendPasswordReset(p: { name: string; email: string; url: string 
   });
 }
 
-export function sendCancellationNotice(p: { name: string; email: string; when: string; message: string; refundedCredits?: number }) {
+export function sendCancellationNotice(p: { name: string; email: string; when: string; message: string; refundedCredits?: number; byStudent?: boolean }) {
+  const note = p.refundedCredits === 0 ? tb.giftCancellationBody : rules.refund;
   return sendEmail({
     to: p.email,
     subject: p.refundedCredits === 0 ? tb.giftCancellationSubject(p.when) : t.emails.cancellation.subject(p.when),
-    text: t.emails.cancellation.body(p),
+    text: p.byStudent ? `${e.hello(p.name)}\n\n${rules.studentCancelled}\n${p.when}\n\n${note}`
+      : t.emails.cancellation.body(p) + (p.refundedCredits === 0 ? "" : `\n\n${rules.refund}`),
     replyTo: siteConfig.teacherEmail,
     presentation: {
       title: e.cancellation, preview: p.refundedCredits === 0 ? tb.giftCancellationBody : e.cancellationPreview,
-      paragraphs: [e.hello(p.name), e.cancellationIntro],
-      details: [{ label: e.lessonTime, value: p.when }, { label: e.teacherMessage, value: p.message }],
-      note: p.refundedCredits === 0 ? tb.giftCancellationBody : e.refundNote,
+      paragraphs: [e.hello(p.name), p.byStudent ? rules.studentCancelled : e.cancellationIntro],
+      details: [{ label: e.lessonTime, value: p.when }, ...(p.byStudent ? [] : [{ label: e.teacherMessage, value: p.message }])],
+      note,
       action: spaceAction("/dashboard", e.studentSpace),
     },
   });
 }
 
-export async function sendBookingEmails(p: { name: string; email: string; when: string; creditsUsed?: number }) {
+export async function sendBookingEmails(p: { name: string; email: string; when: string; teacherWhen?: string; creditsUsed?: number }) {
   const giftNote = p.creditsUsed === 0 ? `\n\n${tb.giftBookingNote}` : "";
   const results = await Promise.all([
     sendEmail({
       to: p.email,
       subject: t.emails.bookingConfirmation.subject(p.when),
-      text: t.emails.bookingConfirmation.body(p) + giftNote,
+      text: t.emails.bookingConfirmation.body(p) + giftNote + `\n\n${rules.cancellation}`,
       replyTo: siteConfig.teacherEmail,
       presentation: {
         title: e.booking, preview: e.bookingPreview,
@@ -73,24 +76,60 @@ export async function sendBookingEmails(p: { name: string; email: string; when: 
           { label: e.lessonTime, value: p.when },
           { label: e.credit, value: p.creditsUsed === 0 ? e.gifted : e.creditUsed },
         ],
+        note: rules.cancellation,
         action: spaceAction("/dashboard", e.studentSpace),
       },
     }),
     sendEmail({
       to: siteConfig.teacherEmail,
-      subject: t.emails.teacherNewBooking.subject(p.name, p.when),
-      text: t.emails.teacherNewBooking.body(p) + giftNote,
+      subject: t.emails.teacherNewBooking.subject(p.name, p.teacherWhen ?? p.when),
+      text: t.emails.teacherNewBooking.body({ ...p, when: p.teacherWhen ?? p.when }) + giftNote,
       replyTo: p.email,
       presentation: {
         title: e.teacherBooking, preview: e.bookingPreview,
         paragraphs: [e.teacherBookingIntro],
         details: [
           { label: e.student, value: p.name || p.email },
-          { label: e.lessonTime, value: p.when },
+          { label: e.lessonTime, value: p.teacherWhen ?? p.when },
           { label: e.credit, value: p.creditsUsed === 0 ? e.gifted : e.creditUsed },
         ],
         action: spaceAction("/admin/schedule", e.teacherSpace),
       },
+    }),
+  ]);
+  return { ok: results.every((result) => result.ok) };
+}
+
+export function sendTrialInvitation(p: { name: string; email: string; token: string }) {
+  const action = spaceAction(`/trial/${p.token}`, rules.inviteAction);
+  return sendEmail({
+    to: p.email, subject: rules.inviteSubject, replyTo: siteConfig.teacherEmail,
+    text: `${e.hello(p.name)}\n\n${rules.trialInfo}\n\n${rules.cancellation}\n\n${action.url}`,
+    presentation: {
+      title: rules.trialTitle, preview: rules.trialInfo, paragraphs: [e.hello(p.name), rules.trialInfo],
+      note: rules.cancellation, action,
+    },
+  });
+}
+
+export async function sendTrialBookingEmails(p: {
+  name: string; email: string; when: string; teacherWhen: string; cancelled?: boolean; message?: string;
+}) {
+  const title = p.cancelled ? rules.cancelled : rules.trialBooked;
+  const results = await Promise.all([
+    sendEmail({
+      to: p.email, subject: `${title} · ${p.when}`, replyTo: siteConfig.teacherEmail,
+      text: `${e.hello(p.name)}\n\n${title}\n${rules.trialLabel}\n${p.when}\n${p.message ?? ""}\n\n${rules.cancellation}`,
+      presentation: { title, preview: p.when, paragraphs: [e.hello(p.name), rules.trialLabel],
+        details: [{ label: e.lessonTime, value: p.when }, ...(p.message ? [{ label: e.teacherMessage, value: p.message }] : [])],
+        note: rules.cancellation },
+    }),
+    sendEmail({
+      to: siteConfig.teacherEmail, subject: `${title} · ${p.name} · ${p.teacherWhen}`, replyTo: p.email,
+      text: `${title}\n${rules.trialLabel}\n${p.name}\n${p.teacherWhen}\n${p.message ?? ""}`,
+      presentation: { title, preview: p.teacherWhen,
+        details: [{ label: e.student, value: p.name }, { label: e.lessonTime, value: p.teacherWhen }],
+        action: spaceAction("/admin/contacts", e.teacherSpace) },
     }),
   ]);
   return { ok: results.every((result) => result.ok) };

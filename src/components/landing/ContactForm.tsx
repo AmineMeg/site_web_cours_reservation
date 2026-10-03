@@ -8,6 +8,8 @@ import { t } from "@/lib/i18n";
 import type { HomepageContent } from "@/lib/website-content";
 import { HomepageText } from "./HomepageText";
 import { buttonClass } from "@/components/ui/button";
+import { LocationFields } from "@/components/LocationFields";
+import { lessonRules as r } from "@/lib/i18n/lesson-rules";
 
 const initialState: ContactFormState = { status: "idle", message: "" };
 
@@ -29,6 +31,7 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
   const err = state.errors ?? {};
 
   if (preview) return <div className="space-y-5">
+    <p className="text-stone-700">{r.trialInfo}</p>
     <div><p className="label"><HomepageText field="contactName">{c.name}</HomepageText> *</p><div className="input min-h-14" aria-hidden /></div>
     <div className="grid gap-5 sm:grid-cols-2">
       <div><p className="label"><HomepageText field="contactEmail">{c.email}</HomepageText> *</p><div className="input min-h-14" aria-hidden /></div>
@@ -37,12 +40,14 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
     <div><p className="label"><HomepageText field="contactMessage">{c.message}</HomepageText></p>
       <div className="input min-h-32 text-stone-500"><HomepageText field="contactPlaceholder">{c.messagePlaceholder}</HomepageText></div>
     </div>
+    <LocationFields preview />
     <div className={buttonClass("primary", "xl", "w-full")}><HomepageText field="contactSubmit">{c.submit}</HomepageText></div>
   </div>;
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
       <fieldset disabled={preview} className="space-y-5">
+      <p className="text-lg text-stone-700">{r.trialInfo}</p>
       <div>
         <label htmlFor="name" className="label">
           {c.name} *
@@ -73,6 +78,8 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
         <textarea id="message" name="message" rows={4} maxLength={2000} placeholder={c.messagePlaceholder} className="input" />
         {err.message && <p className="mt-1 text-red-700">{err.message}</p>}
       </div>
+      <LocationFields />
+      {err.location && <p className="text-red-700">{err.location}</p>}
       {/* Honeypot field, hidden from humans */}
       <div aria-hidden className="absolute -left-[9999px]">
         <label htmlFor="company">{t.landing.contact.company}</label>

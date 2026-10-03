@@ -8,6 +8,9 @@ export interface Profile {
   phone: string;
   objectives: string;
   teacher_notes: string;
+  country: string;
+  city: string;
+  timezone: string;
   credits: number;
   is_active: boolean;
   created_at: string;
@@ -23,6 +26,25 @@ export interface Contact {
   created_at: string;
   converted_at: string | null;
   student_id: string | null;
+  country: string;
+  city: string;
+  timezone: string;
+  trial_declined_at: string | null;
+}
+
+export interface TrialBooking {
+  id: string;
+  contact_id: string;
+  starts_at: string;
+  ends_at: string;
+  status: BookingStatus;
+  cancel_message: string | null;
+}
+
+export interface CreditBatch {
+  id: string;
+  remaining: number;
+  expires_at: string;
 }
 
 export interface WeeklyAvailability {
@@ -54,7 +76,7 @@ export interface Booking {
   teacher_request_id: string | null;
 }
 
-export type StudentCard = Pick<Profile, "id" | "full_name" | "email" | "phone" | "objectives" | "credits">;
+export type StudentCard = Pick<Profile, "id" | "full_name" | "email" | "phone" | "objectives" | "credits" | "timezone">;
 
 export interface BookingWithStudent extends Booking {
   student: StudentCard | null;
@@ -72,6 +94,7 @@ export interface AppSettings {
   lesson_minutes: number;
   booking_window_days: number;
   min_notice_hours: number;
+  credit_validity_months: number;
 }
 
 export interface ActionResult {

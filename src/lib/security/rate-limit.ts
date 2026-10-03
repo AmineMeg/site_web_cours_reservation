@@ -24,6 +24,9 @@ export const RATE_LIMITS = {
   passwordCheckUser: { bucket: "password-check:user", max: 5, windowSeconds: 15 * 60 },
   enrollUser: { bucket: "enroll:user", max: 10, windowSeconds: 60 * 60 },
   accountLinkIp: { bucket: "account-link:ip", max: 20, windowSeconds: 15 * 60 },
+  trialEmail: { bucket: "trial:email", max: 3, windowSeconds: 60 * 60 },
+  trialIp: { bucket: "trial:ip", max: 10, windowSeconds: 60 * 60 },
+  trialChange: { bucket: "trial:change", max: 10, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, Rule>;
 
 async function requestIpKey(): Promise<string | null> {
@@ -131,6 +134,10 @@ export async function limitRecovery(userId: string): Promise<boolean> {
 /** True when a password-reset email may be requested for `email`. */
 export async function limitPasswordReset(email: string): Promise<boolean> {
   return limit([[RATE_LIMITS.resetEmail, normalizeEmail(email)], [RATE_LIMITS.resetIp, await requestIpKey()]]);
+}
+
+export async function limitTrialContact(email: string): Promise<boolean> {
+  return limit([[RATE_LIMITS.trialEmail, normalizeEmail(email)], [RATE_LIMITS.trialIp, await requestIpKey()]]);
 }
 
 /** True when a signed-in user may submit their current password again (sensitive changes). */

@@ -1,18 +1,19 @@
 import { requireTeacher } from "@/lib/auth";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { signOut } from "@/app/actions/auth";
-import { CONTACT_RETENTION_DAYS } from "@/lib/config";
 import { t } from "@/lib/i18n";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { supabase, profile } = await requireTeacher();
 
-  const since = new Date(Date.now() - CONTACT_RETENTION_DAYS * 86400_000).toISOString();
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from("contacts")
     .select("id", { count: "exact", head: true })
-    .is("converted_at", null)
-    .gte("created_at", since);
+    .is("converted_at", null);
+  if (error) {
+    console.error("[admin] Contact count unavailable", error.code);
+    throw new Error(t.common.error);
+  }
 
   return (
     <div className="min-h-screen md:flex">

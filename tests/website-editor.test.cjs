@@ -65,7 +65,7 @@ test("both photos render in public and editable previews, with original visuals 
     teacherImage: "https://project.supabase.co/storage/v1/object/public/homepage-images/12345678-1234-4123-8123-123456789abc.png" };
   for (const html of [renderPreview(content, "teacherImage"), renderToStaticMarkup(React.createElement(Homepage, { content }))]) {
     assert.match(html, /<img[^>]+alt="Fale espanhol com confiança desde a primeira aula"/);
-    assert.match(html, /<img[^>]+alt="Professora Teixeira"/);
+    assert.ok(html.includes(`alt="${content.teacherName}"`));
     assert.ok(html.includes(content.heroImage));
     assert.ok(html.includes(content.teacherImage));
     assert.doesNotMatch(html, /👩‍🏫|¿Hablamos\?/);

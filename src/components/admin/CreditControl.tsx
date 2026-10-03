@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { adjustCredits } from "@/app/admin/actions";
 import { t } from "@/lib/i18n";
+import { lessonRules as r } from "@/lib/i18n/lesson-rules";
 
 /** Big "− [amount] +" control for prepaid lesson credits. */
-export function CreditControl({ studentId, initialCredits }: { studentId: string; initialCredits: number }) {
+export function CreditControl({ studentId, initialCredits, validityMonths }: { studentId: string; initialCredits: number; validityMonths: number }) {
   const c = t.admin.credits;
   const [credits, setCredits] = useState(initialCredits);
   const [amount, setAmount] = useState(1);
   const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  useEffect(() => setCredits(initialCredits), [initialCredits]);
 
   const change = (sign: 1 | -1) =>
     startTransition(async () => {
@@ -22,6 +24,7 @@ export function CreditControl({ studentId, initialCredits }: { studentId: string
   return (
     <div className="rounded-2xl bg-accent-50 p-4">
       <p className="text-base font-semibold text-stone-700">{c.label}</p>
+      <p className="my-2 text-sm text-stone-600">{r.validity(validityMonths)}</p>
       <p className="text-4xl font-extrabold text-stone-900" aria-live="polite">
         {credits}
       </p>

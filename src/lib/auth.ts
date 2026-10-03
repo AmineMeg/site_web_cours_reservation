@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { defaultSettings } from "@/lib/config";
 import { nextFromReferer, safeNextPath } from "@/lib/security/redirects";
 import type { AppSettings, Profile } from "@/lib/types";
 
@@ -163,6 +162,11 @@ export const getCurrentProfile = cache(async () => {
   if (!user || !status?.sessionOk || (status.requiresMfa && (!status.hasVerifiedFactor || status.aal !== "aal2"))) {
     return { supabase, profile: null as Profile | null };
   }
+  const { error: balanceError } = await supabase.rpc("refresh_credit_balances");
+  if (balanceError) {
+    console.error("[credits] Balance refresh failed", balanceError.code);
+    throw new Error("Unable to load credit balances. Run trial-and-credit-rules.sql.");
+  }
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
   return { supabase, profile: (data as Profile | null) ?? null };
 });
@@ -188,10 +192,14 @@ export async function requireStudent() {
 }
 
 export async function getSettings(supabase: SupabaseClient): Promise<AppSettings> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("app_settings")
-    .select("timezone, lesson_minutes, booking_window_days, min_notice_hours")
+    .select("timezone, lesson_minutes, booking_window_days, min_notice_hours, credit_validity_months")
     .eq("id", 1)
     .maybeSingle();
-  return (data as AppSettings | null) ?? defaultSettings;
+  if (error || !data) {
+    console.error("[settings] Settings unavailable", error?.code);
+    throw new Error("Unable to load lesson settings. Run trial-and-credit-rules.sql.");
+  }
+  return data as AppSettings;
 }

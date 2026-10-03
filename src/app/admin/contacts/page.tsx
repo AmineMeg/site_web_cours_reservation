@@ -4,21 +4,29 @@ import { PageTitle } from "@/components/ui/Notice";
 import { CONTACT_RETENTION_DAYS } from "@/lib/config";
 import { formatDate } from "@/lib/dates";
 import { t } from "@/lib/i18n";
-import type { Contact } from "@/lib/types";
+import type { Contact, TrialBooking } from "@/lib/types";
 
 export default async function ContactsPage() {
   const { supabase } = await requireTeacher();
   const settings = await getSettings(supabase);
 
   const now = Date.now();
-  const since = new Date(now - CONTACT_RETENTION_DAYS * 86400_000).toISOString();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("contacts")
     .select("*")
     .is("converted_at", null)
-    .gte("created_at", since)
     .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[admin] Contacts unavailable", error.code);
+    throw new Error(t.common.error);
+  }
   const contacts = (data ?? []) as Contact[];
+  const { data: trialData, error: trialError } = await supabase.from("trial_bookings").select("*");
+  if (trialError) {
+    console.error("[admin] Trials unavailable", trialError.code);
+    throw new Error(t.common.error);
+  }
+  const trials = (trialData ?? []) as TrialBooking[];
 
   return (
     <>
@@ -35,6 +43,10 @@ export default async function ContactsPage() {
                 contact={contact}
                 receivedLabel={formatDate(contact.created_at, settings.timezone)}
                 daysLeft={Math.max(0, CONTACT_RETENTION_DAYS - age)}
+                trial={trials.find((trial) => trial.contact_id === contact.id && trial.status === "booked") ?? null}
+                hasTrialHistory={trials.some((trial) => trial.contact_id === contact.id)}
+                timezone={settings.timezone}
+                now={now}
               />
             );
           })}

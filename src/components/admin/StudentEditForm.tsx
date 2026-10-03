@@ -8,6 +8,7 @@ import { Notice } from "@/components/ui/Notice";
 import { t } from "@/lib/i18n";
 import { accountText } from "@/lib/i18n/account";
 import type { ActionResult, Profile } from "@/lib/types";
+import { LocationFields } from "@/components/LocationFields";
 
 export function StudentEditForm({ student }: { student: Profile }) {
   const d = t.admin.studentDetail;
@@ -39,6 +40,7 @@ export function StudentEditForm({ student }: { student: Profile }) {
             <input id="phone" name="phone" type="tel" defaultValue={student.phone} maxLength={40} className="input" />
           </div>
         </div>
+        <LocationFields initial={student} />
         <div>
           <label htmlFor="objectives" className="label">{d.objectives}</label>
           <textarea id="objectives" name="objectives" rows={4} defaultValue={student.objectives} maxLength={4000} className="input" />

@@ -69,7 +69,7 @@ export function formatTime(date: Date | string, tz: string): string {
 }
 
 export function formatDateTime(date: Date | string, tz: string): string {
-  return new Intl.DateTimeFormat(t.locale, {
+  const label = new Intl.DateTimeFormat(t.locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -77,6 +77,7 @@ export function formatDateTime(date: Date | string, tz: string): string {
     minute: "2-digit",
     timeZone: tz,
   }).format(new Date(date));
+  return `${label} (${tz.replace(/_/g, " ")}, UTC${formatInTimeZone(new Date(date), tz, "xxx")})`;
 }
 
 export function formatDate(date: Date | string, tz: string): string {

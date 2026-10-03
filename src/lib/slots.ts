@@ -1,5 +1,6 @@
-import type { AppSettings, BlockedSlot, WeeklyAvailability } from "@/lib/types";
-import { addDaysKey, localToUtc, timeToMinutes, todayKey, weekdayOfKey } from "@/lib/dates";
+import type { AppSettings, BlockedSlot, WeeklyAvailability, CreditBatch } from "@/lib/types";
+import { addDaysKey, dayKeyOf, localToUtc, timeToMinutes, todayKey, weekdayOfKey } from "@/lib/dates";
+import { formatInTimeZone } from "date-fns-tz";
 
 export interface Slot {
   startsAt: string; // ISO
@@ -11,6 +12,12 @@ export interface Slot {
 export interface BusyRange {
   starts_at: string;
   ends_at: string;
+}
+
+export function studentBookingSlots(slots: Slot[], timezone: string, batches: CreditBatch[]): Slot[] {
+  const latestExpiry = Math.max(0, ...batches.filter((batch) => batch.remaining > 0).map((batch) => Date.parse(batch.expires_at)));
+  return slots.filter((slot) => Date.parse(slot.endsAt) <= latestExpiry)
+    .map((slot) => ({ ...slot, dayKey: dayKeyOf(slot.startsAt, timezone) }));
 }
 
 /** Every slot of a day according to the weekly hours (ignores bookings/blocks). */
@@ -69,6 +76,11 @@ export function generateAvailableSlots(params: {
     for (const startMinutes of daySlotStarts(dayKey, weekly, minutes)) {
       const start = localToUtc(dayKey, startMinutes, tz).getTime();
       const end = start + minutes * 60_000;
+      // Skip nonexistent wall-clock times and lessons crossing a DST transition.
+      if (formatInTimeZone(start, tz, "yyyy-MM-dd") !== dayKey ||
+        timeToMinutes(formatInTimeZone(start, tz, "HH:mm")) !== startMinutes ||
+        formatInTimeZone(end, tz, "yyyy-MM-dd") !== dayKey ||
+        timeToMinutes(formatInTimeZone(end, tz, "HH:mm")) !== startMinutes + minutes) continue;
       if (start < earliest || start > latest) continue;
       if (isBlocked(dayKey, startMinutes, startMinutes + minutes, blocked)) continue;
       if (busyRanges.some(([s, e]) => s < end && e > start)) continue;

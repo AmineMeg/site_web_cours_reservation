@@ -15,7 +15,9 @@ import type { ActionResult } from "@/lib/types";
 import type { PublicReview } from "@/lib/reviews";
 import { reviewText as r } from "@/lib/i18n/reviews";
 
-export function WebsiteEditor({ initial, revision, reviews = [] }: { initial: HomepageContent; revision: number; reviews?: PublicReview[] }) {
+export function WebsiteEditor({ initial, revision, reviews = [], creditValidityMonths = 12 }: {
+  initial: HomepageContent; revision: number; reviews?: PublicReview[]; creditValidityMonths?: number;
+}) {
   const [content, setContent] = useState(initial);
   const [savedContent, setSavedContent] = useState(initial);
   const [version, setVersion] = useState(revision);
@@ -153,7 +155,7 @@ export function WebsiteEditor({ initial, revision, reviews = [] }: { initial: Ho
         </iframe>
         {previewRoot && createPortal(
           <HomepageEditingContext.Provider value={{ selected, select: (key) => selectField(key, true) }}>
-            <Homepage content={content} preview reviews={reviews} />
+            <Homepage content={content} preview reviews={reviews} creditValidityMonths={creditValidityMonths} />
           </HomepageEditingContext.Provider>, previewRoot)}
       </section>
       <aside ref={editorPanel} className="min-h-0 overflow-auto overscroll-contain rounded-2xl border-2 border-brand-200 bg-white p-5" aria-label={w.editing}>
