@@ -113,6 +113,7 @@ export const en = {
     submitting: "Logging in…",
     error: "Wrong email or password. Please try again.",
     inactive: "Your account is paused. Please contact your teacher.",
+    noProfile: "Your account is not fully set up yet. Please contact your teacher.",
     forgot: "Forgot your password? Ask your teacher to send you a new one.",
     backHome: "← Back to the website",
   },

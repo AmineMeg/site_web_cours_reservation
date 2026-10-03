@@ -28,10 +28,12 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
 
   if (profileError || !profile) {
     console.error("[login] profile not found for user", data.user.id, data.user.email, profileError?.message);
+    await supabase.auth.signOut();
+    return { message: t.login.noProfile };
   }
 
-  if (profile?.role === "teacher") redirect("/admin");
-  if (profile && !profile.is_active) {
+  if (profile.role === "teacher") redirect("/admin");
+  if (!profile.is_active) {
     await supabase.auth.signOut();
     return { message: t.login.inactive };
   }
