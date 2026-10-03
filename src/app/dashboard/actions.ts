@@ -6,6 +6,7 @@ import { sendBookingEmails, sendStudentMessageToTeacher } from "@/lib/notificati
 import { formatDateTime } from "@/lib/dates";
 import { field } from "@/lib/utils";
 import { t } from "@/lib/i18n";
+import { accountText } from "@/lib/i18n/account";
 import type { ActionResult } from "@/lib/types";
 
 export async function bookLesson(startsAt: string): Promise<ActionResult> {
@@ -22,14 +23,14 @@ export async function bookLesson(startsAt: string): Promise<ActionResult> {
   }
 
   const settings = await getSettings(supabase);
-  await sendBookingEmails({
+  const delivery = await sendBookingEmails({
     name: profile.full_name,
     email: profile.email,
     when: formatDateTime(startsAt, settings.timezone),
   });
 
   revalidatePath("/dashboard", "layout");
-  return { ok: true, message: b.success };
+  return { ok: true, message: delivery.ok ? b.success : accountText.bookedWithoutEmail };
 }
 
 export async function updateMyProfile(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
@@ -48,18 +49,6 @@ export async function updateMyProfile(_prev: ActionResult | null, formData: Form
   return { ok: true, message: t.dashboard.profile.saved };
 }
 
-export async function changePassword(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  const { supabase } = await requireStudent();
-  const p = t.dashboard.profile;
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-  if (password.length < 8) return { ok: false, message: p.passwordTooShort };
-  if (password !== confirm) return { ok: false, message: p.passwordMismatch };
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) return { ok: false, message: t.common.error };
-  return { ok: true, message: p.passwordSaved };
-}
-
 export async function sendMessageToTeacher(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const { supabase, profile } = await requireStudent();
   const body = field(formData, "message").slice(0, 4000);
@@ -68,6 +57,6 @@ export async function sendMessageToTeacher(_prev: ActionResult | null, formData:
   const { error } = await supabase.from("messages").insert({ student_id: profile.id, body });
   if (error) return { ok: false, message: t.common.error };
 
-  await sendStudentMessageToTeacher({ name: profile.full_name, email: profile.email, message: body });
-  return { ok: true, message: t.dashboard.contact.sent };
+  const delivery = await sendStudentMessageToTeacher({ name: profile.full_name, email: profile.email, message: body });
+  return { ok: true, message: delivery.ok ? t.dashboard.contact.sent : accountText.savedWithoutEmail };
 }

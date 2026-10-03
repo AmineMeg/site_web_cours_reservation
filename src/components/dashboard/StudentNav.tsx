@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
+import { accountText } from "@/lib/i18n/account";
 
 const items = [
   { href: "/dashboard", icon: "📅", label: t.dashboard.nav.book },
   { href: "/dashboard/profile", icon: "👤", label: t.dashboard.nav.profile },
   { href: "/dashboard/contact", icon: "✉️", label: t.dashboard.nav.contact },
+  { href: "/security/settings", icon: "🔒", label: accountText.security },
 ];
 
 export function StudentNav() {

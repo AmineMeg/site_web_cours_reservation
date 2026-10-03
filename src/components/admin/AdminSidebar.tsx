@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 import { t } from "@/lib/i18n";
+import { accountText } from "@/lib/i18n/account";
 
 const items = [
   { href: "/admin/contacts", icon: "📩", label: t.admin.nav.contacts, badgeKey: "contacts" as const },
   { href: "/admin/students", icon: "👩‍🎓", label: t.admin.nav.students },
   { href: "/admin/schedule", icon: "📅", label: t.admin.nav.schedule },
   { href: "/admin/messages", icon: "✉️", label: t.admin.nav.messages },
+  { href: "/security/settings", icon: "🔒", label: accountText.security },
 ];
 
 export function AdminSidebar({ teacherName, newContacts }: { teacherName: string; newContacts: number }) {

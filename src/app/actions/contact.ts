@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notifyTeacherNewContact } from "@/lib/notifications";
 import { EMAIL_REGEX, field } from "@/lib/utils";
 import { t } from "@/lib/i18n";
+import { accountText } from "@/lib/i18n/account";
 
 type FieldName = "name" | "email" | "phone" | "message";
 
@@ -45,7 +46,7 @@ export async function submitContact(_prev: ContactFormState, formData: FormData)
   }
 
   // 2) Tell the teacher (email placeholder, see src/lib/email.ts).
-  await notifyTeacherNewContact(data);
+  const delivery = await notifyTeacherNewContact(data);
 
-  return { status: "success", message: t.landing.contact.success };
+  return { status: "success", message: delivery.ok ? t.landing.contact.success : accountText.savedWithoutEmail };
 }

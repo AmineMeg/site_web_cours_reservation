@@ -14,19 +14,19 @@ export function notifyTeacherNewContact(c: { name: string; email: string; phone:
   });
 }
 
-export function sendStudentCredentials(p: { name: string; email: string; password: string }) {
+export function sendStudentInvitation(p: { name: string; email: string; url: string }) {
   return sendEmail({
     to: p.email,
     subject: t.emails.credentials.subject,
-    text: t.emails.credentials.body({ ...p, url: siteConfig.siteUrl }),
+    text: t.emails.credentials.body(p),
   });
 }
 
-export function sendNewPassword(p: { name: string; email: string; password: string }) {
+export function sendPasswordReset(p: { name: string; email: string; url: string }) {
   return sendEmail({
     to: p.email,
     subject: t.emails.passwordReset.subject,
-    text: t.emails.passwordReset.body({ ...p, url: siteConfig.siteUrl }),
+    text: t.emails.passwordReset.body(p),
   });
 }
 
@@ -40,7 +40,7 @@ export function sendCancellationNotice(p: { name: string; email: string; when: s
 }
 
 export async function sendBookingEmails(p: { name: string; email: string; when: string }) {
-  await Promise.all([
+  const results = await Promise.all([
     sendEmail({
       to: p.email,
       subject: t.emails.bookingConfirmation.subject(p.when),
@@ -53,6 +53,7 @@ export async function sendBookingEmails(p: { name: string; email: string; when: 
       text: t.emails.teacherNewBooking.body(p),
     }),
   ]);
+  return { ok: results.every((result) => result.ok) };
 }
 
 export function sendStudentMessageToTeacher(p: { name: string; email: string; message: string }) {

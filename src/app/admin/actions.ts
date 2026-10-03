@@ -1,10 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTeacher, getSettings } from "@/lib/auth";
+import { requireTeacher, requireRecentAuthentication, getSettings } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendCancellationNotice, sendNewPassword, sendStudentCredentials } from "@/lib/notifications";
-import { EMAIL_REGEX, field, generatePassword } from "@/lib/utils";
+import { sendCancellationNotice, sendPasswordReset, sendStudentInvitation } from "@/lib/notifications";
+import { emailIsConfigured } from "@/lib/email";
+import { accountSiteUrl, confirmationLink, createAccountLink } from "@/lib/auth-links";
+import { accountText } from "@/lib/i18n/account";
+import { EMAIL_REGEX, field } from "@/lib/utils";
+import { verifyCurrentPassword } from "@/lib/verify-password";
 import { formatDateTime, timeToMinutes, weekdayNames } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { ActionResult, Contact, Profile, WeeklyAvailability } from "@/lib/types";
@@ -20,55 +24,63 @@ function fail(message: string = t.common.error): ActionResult {
 // Tab 1 – New contacts
 // ---------------------------------------------------------------------------
 
-/** 1-click: contact -> student account (0 credits) + credentials email. */
+/** 1-click: contact -> student account (0 credits) + one-use invitation. */
 export async function createStudentFromContact(contactId: string): Promise<ActionResult> {
   const { supabase } = await requireTeacher();
+  await requireRecentAuthentication();
+  if (!emailIsConfigured()) return fail(accountText.emailUnavailable);
 
   const { data } = await supabase.from("contacts").select("*").eq("id", contactId).maybeSingle();
   const contact = data as Contact | null;
   if (!contact || contact.converted_at) return fail();
 
   const admin = createAdminClient();
-  const password = generatePassword();
-
-  const { data: created, error } = await admin.auth.admin.createUser({
+  const { data: created, error } = await admin.auth.admin.generateLink({
+    type: "invite",
     email: contact.email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: contact.name, phone: contact.phone },
+    options: {
+      redirectTo: new URL("/auth/confirm", accountSiteUrl()).toString(),
+      data: { full_name: contact.name, phone: contact.phone },
+    },
   });
 
-  if (error || !created.user) {
+  if (error || !created.user || !created.properties) {
     const exists = error?.code === "email_exists" || /already/i.test(error?.message ?? "");
-    console.error("[admin] createUser failed", error);
+    console.error("[admin] generate invitation failed", error?.status, error?.code);
     return fail(exists ? t.admin.contacts.emailExists : t.common.error);
   }
 
-  // The DB trigger creates the profile; upsert makes sure all fields are set.
-  const { error: profileError } = await admin.from("profiles").upsert({
-    id: created.user.id,
-    role: "student",
-    email: contact.email,
+  // Do not overwrite credits, activation status or role on a retried invitation.
+  const { data: updatedProfile, error: profileError } = await admin.from("profiles").update({
     full_name: contact.name,
     phone: contact.phone,
     objectives: contact.message,
-    credits: 0,
-    is_active: true,
-  });
-  if (profileError) {
+  }).eq("id", created.user.id).eq("role", "student").select("id").single();
+  if (profileError || !updatedProfile) {
     console.error("[admin] profile upsert failed", profileError);
-    await admin.auth.admin.deleteUser(created.user.id);
     return fail();
   }
 
-  await supabase
+  const { data: converted, error: conversionError } = await supabase
     .from("contacts")
     .update({ converted_at: new Date().toISOString(), student_id: created.user.id })
-    .eq("id", contact.id);
+    .eq("id", contact.id)
+    .is("converted_at", null)
+    .select("id")
+    .single();
+  if (conversionError || !converted) {
+    console.error("[admin] contact conversion failed", conversionError?.code);
+    return fail();
+  }
 
-  await sendStudentCredentials({ name: contact.name, email: contact.email, password });
+  const delivery = await sendStudentInvitation({
+    name: contact.name,
+    email: contact.email,
+    url: confirmationLink(created.properties.hashed_token, "invite"),
+  });
 
   revalidatePath("/admin", "layout");
+  if (!delivery.ok) return fail(accountText.emailFailed);
   return { ok: true, message: t.admin.contacts.created(contact.name) };
 }
 
@@ -104,6 +116,7 @@ export async function adjustCredits(
 
 export async function updateStudent(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireTeacher();
+  await requireRecentAuthentication();
   const id = field(formData, "id");
   const update = {
     full_name: field(formData, "full_name").slice(0, 120),
@@ -115,11 +128,26 @@ export async function updateStudent(_prev: ActionResult | null, formData: FormDa
   };
   if (!id || !EMAIL_REGEX.test(update.email)) return fail(t.landing.contact.errors.email);
 
-  const { data: current } = await supabase.from("profiles").select("email, role").eq("id", id).maybeSingle();
-  if (!current || (current as Profile).role !== "student") return fail(t.admin.studentDetail.notFound);
+  const { data: current } = await supabase.from("profiles").select("email, role, is_active").eq("id", id).maybeSingle();
+  if (!current || current.role !== "student") return fail(t.admin.studentDetail.notFound);
+
+  if (current.email !== update.email || current.is_active !== update.is_active) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) return fail();
+    const { limitSensitivePasswordCheck } = await import("@/lib/security/rate-limit");
+    if (!await limitSensitivePasswordCheck(user.id)) return fail();
+    if (!await verifyCurrentPassword(user.email, String(formData.get("current_password") ?? ""), user.id)) {
+      return fail(accountText.wrongCurrentPassword);
+    }
+    const { error: revokeError } = await createAdminClient().rpc("revoke_user_sessions", { p_user_id: id });
+    if (revokeError) {
+      console.error("[admin] Student session revocation failed", revokeError.code);
+      return fail();
+    }
+  }
 
   // Changing the login email must also be done in Supabase Auth.
-  if ((current as Profile).email !== update.email) {
+  if (current.email !== update.email) {
     const { error } = await createAdminClient().auth.admin.updateUserById(id, {
       email: update.email,
       email_confirm: true,
@@ -139,15 +167,23 @@ export async function updateStudent(_prev: ActionResult | null, formData: FormDa
 
 export async function resetStudentPassword(studentId: string): Promise<ActionResult> {
   const { supabase } = await requireTeacher();
+  await requireRecentAuthentication();
+  if (!emailIsConfigured()) return fail(accountText.emailUnavailable);
   const { data } = await supabase.from("profiles").select("*").eq("id", studentId).maybeSingle();
   const student = data as Profile | null;
   if (!student || student.role !== "student") return fail(t.admin.studentDetail.notFound);
 
-  const password = generatePassword();
-  const { error } = await createAdminClient().auth.admin.updateUserById(studentId, { password });
-  if (error) return fail();
-
-  await sendNewPassword({ name: student.full_name, email: student.email, password });
+  const { data: authUser, error } = await createAdminClient().auth.admin.getUserById(studentId);
+  if (error || !authUser.user?.email) {
+    console.error("[admin] account lookup failed", error?.code);
+    return fail();
+  }
+  const type = authUser.user.email_confirmed_at ? "recovery" : "invite";
+  const link = await createAccountLink(authUser.user.email, type);
+  if (!link) return fail(accountText.resetFailed);
+  const payload = { name: student.full_name, email: authUser.user.email, url: link.url };
+  const delivery = await (type === "invite" ? sendStudentInvitation(payload) : sendPasswordReset(payload));
+  if (!delivery.ok) return fail(accountText.resetFailed);
   return { ok: true, message: t.admin.studentDetail.resetPasswordDone };
 }
 
@@ -173,17 +209,19 @@ export async function cancelLesson(bookingId: string, message: string): Promise<
     getSettings(supabase),
   ]);
 
+  let delivered = false;
   if (student) {
-    await sendCancellationNotice({
+    const delivery = await sendCancellationNotice({
       name: student.full_name,
       email: student.email,
       when: formatDateTime(booking.starts_at, settings.timezone),
       message: text,
     });
+    delivered = delivery.ok;
   }
 
   revalidatePath("/admin", "layout");
-  return { ok: true, message: t.admin.lessonModal.cancelled };
+  return { ok: true, message: delivered ? t.admin.lessonModal.cancelled : accountText.cancelledWithoutEmail };
 }
 
 export async function saveWeeklyHours(rows: WeeklyAvailability[]): Promise<ActionResult> {

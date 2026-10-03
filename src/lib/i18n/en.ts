@@ -114,7 +114,7 @@ export const en = {
     error: "Wrong email or password. Please try again.",
     inactive: "Your account is paused. Please contact your teacher.",
     noProfile: "Your account is not fully set up yet. Please contact your teacher.",
-    forgot: "Forgot your password? Ask your teacher to send you a new one.",
+    forgot: "Forgot your password?",
     backHome: "← Back to the website",
   },
 
@@ -138,7 +138,7 @@ export const en = {
       noMessage: "(No message)",
       createAccount: "Create student account",
       creating: "Creating account…",
-      created: (name: string) => `Done! ${name} is now your student. Their login details were sent by email.`,
+      created: (name: string) => `Done! ${name} is now your student. A secure activation link was sent by email.`,
       emailExists: "A student account already exists with this email.",
       remove: "Remove",
       removeConfirm: (name: string) => `Remove ${name} from the list? This cannot be undone.`,
@@ -176,9 +176,9 @@ export const en = {
       saved: "Changes saved.",
       upcoming: "Next lessons",
       noUpcoming: "No lessons booked.",
-      resetPassword: "Send a new password",
-      resetPasswordConfirm: "Send a new password to this student by email?",
-      resetPasswordDone: "A new password was sent by email.",
+      resetPassword: "Send an account access link",
+      resetPasswordConfirm: "Send a secure activation or password reset link to this student?",
+      resetPasswordDone: "A secure account access link was sent by email.",
       notFound: "Student not found.",
     },
 
@@ -321,13 +321,13 @@ export const en = {
     },
     credentials: {
       subject: "Your Spanish lessons account is ready",
-      body: (p: { name: string; email: string; password: string; url: string }) =>
-        `Hello ${p.name},\n\nWelcome! Your student account is ready.\n\nWebsite: ${p.url}/login\nEmail: ${p.email}\nPassword: ${p.password}\n\nPlease change your password in "My profile" after logging in.\n\n¡Hasta pronto!`,
+      body: (p: { name: string; email: string; url: string }) =>
+        `Hello ${p.name},\n\nWelcome! Your student account is ready.\n\nActivate your account and choose your password:\n${p.url}\n\nYour login email: ${p.email}\n\nThis link expires and can only be used once. You will also set up an authenticator app to protect your account. Never share the link or your security codes.\n\n¡Hasta pronto!`,
     },
     passwordReset: {
-      subject: "Your new password",
-      body: (p: { name: string; email: string; password: string; url: string }) =>
-        `Hello ${p.name},\n\nHere is your new password.\n\nWebsite: ${p.url}/login\nEmail: ${p.email}\nPassword: ${p.password}\n\n¡Hasta pronto!`,
+      subject: "Reset your Spanish lessons password",
+      body: (p: { name: string; email: string; url: string }) =>
+        `Hello ${p.name},\n\nUse this secure link to choose a new password:\n${p.url}\n\nThis link expires and can only be used once. Never share it. If you did not request this change, you can ignore this email.\n\n¡Hasta pronto!`,
     },
     cancellation: {
       subject: (when: string) => `Your Spanish lesson on ${when} is cancelled`,
