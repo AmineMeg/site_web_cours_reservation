@@ -1,6 +1,7 @@
 import { t } from "@/lib/i18n";
 import { siteConfig } from "@/lib/config";
-import type { HomepageContent } from "@/lib/website-content";
+import type { HomepageContent, HomepageKey } from "@/lib/website-content";
+import { HomepageText } from "./HomepageText";
 
 export function About({ content }: { content?: HomepageContent }) {
   const name = content?.teacherName ?? siteConfig.teacherName;
@@ -25,21 +26,21 @@ export function About({ content }: { content?: HomepageContent }) {
           👩‍🏫
         </div>
         <div>
-          <h2 className="text-3xl font-bold sm:text-4xl">{a.title}</h2>
+          <h2 className="text-3xl font-bold sm:text-4xl"><HomepageText field="aboutTitle">{a.title}</HomepageText></h2>
           <p className="mt-2 text-xl font-semibold text-brand-700">
-            {name} — {a.role}
+            <HomepageText field="teacherName">{name}</HomepageText> — <HomepageText field="aboutRole">{a.role}</HomepageText>
           </p>
           <div className="mt-6 space-y-4 text-lg leading-relaxed text-stone-700">
             {a.paragraphs.map((p, index) => (
-              <p key={index}>{p}</p>
+              <p key={index}><HomepageText field={`aboutParagraph${index + 1}` as HomepageKey}>{p}</HomepageText></p>
             ))}
           </div>
           <dl className="mt-8 grid grid-cols-3 gap-4">
             {a.stats.map((s, index) => (
               <div key={index} className="rounded-2xl bg-stone-50 p-4 text-center">
                 <dt className="sr-only">{s.label}</dt>
-                <dd className="text-3xl font-extrabold text-brand-700">{s.value}</dd>
-                <dd className="text-sm text-stone-600">{s.label}</dd>
+                <dd className="text-3xl font-extrabold text-brand-700"><HomepageText field={`stat${index + 1}Value` as HomepageKey}>{s.value}</HomepageText></dd>
+                <dd className="text-sm text-stone-600"><HomepageText field={`stat${index + 1}Label` as HomepageKey}>{s.label}</HomepageText></dd>
               </div>
             ))}
           </dl>

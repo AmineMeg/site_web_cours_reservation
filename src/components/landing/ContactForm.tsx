@@ -6,6 +6,8 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Notice } from "@/components/ui/Notice";
 import { t } from "@/lib/i18n";
 import type { HomepageContent } from "@/lib/website-content";
+import { HomepageText } from "./HomepageText";
+import { buttonClass } from "@/components/ui/button";
 
 const initialState: ContactFormState = { status: "idle", message: "" };
 
@@ -25,6 +27,18 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
   }
 
   const err = state.errors ?? {};
+
+  if (preview) return <div className="space-y-5">
+    <div><p className="label"><HomepageText field="contactName">{c.name}</HomepageText> *</p><div className="input min-h-14" aria-hidden /></div>
+    <div className="grid gap-5 sm:grid-cols-2">
+      <div><p className="label"><HomepageText field="contactEmail">{c.email}</HomepageText> *</p><div className="input min-h-14" aria-hidden /></div>
+      <div><p className="label"><HomepageText field="contactPhone">{c.phone}</HomepageText></p><div className="input min-h-14" aria-hidden /></div>
+    </div>
+    <div><p className="label"><HomepageText field="contactMessage">{c.message}</HomepageText></p>
+      <div className="input min-h-32 text-stone-500"><HomepageText field="contactPlaceholder">{c.messagePlaceholder}</HomepageText></div>
+    </div>
+    <div className={buttonClass("primary", "xl", "w-full")}><HomepageText field="contactSubmit">{c.submit}</HomepageText></div>
+  </div>;
 
   return (
     <form action={formAction} className="space-y-5" noValidate>

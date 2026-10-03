@@ -284,13 +284,22 @@ Do not assume the earlier security migration automatically protects future table
 
 ### Editing the homepage
 
-Open **Meu site** in the teacher sidebar. Choose Boas-vindas, Sobre mim,
-Depoimentos dos alunos or Contato. Edit the clearly labelled text fields,
-use **Ver minhas alterações** and press **Salvar e atualizar meu site**.
+Open **Meu site** in the teacher sidebar. The real page preview stays visible.
+Click any outlined text (or select it with Tab and Enter/Space) to open its field
+in the editing panel. Changes appear immediately in the preview; the yellow
+highlight identifies the selected text. The grouped list also gives access to
+every field, including button labels, the contact placeholder and the footer.
+Press **Salvar e atualizar meu site** to publish.
 
 - Saved text is public immediately; there is no need to redeploy.
 - Portuguese defaults are used until the first save (existing stored text requires the localization migration).
 - The preview uses the real homepage components; its contact form is disabled.
+- In the preview, the brand and call-to-action buttons select their editable text
+  instead of navigating away. Public-site links and forms keep their normal behavior.
+- The preview and editing panel scroll separately and stack on smaller screens.
+- **Desfazer alteração deste texto** restores the selected text to its last saved
+  value. **Descartar todas as alterações** restores all saved texts after confirmation.
+- Unsaved changes are marked clearly and trigger a warning when leaving the page.
 - Two editors cannot silently overwrite each other: if another window saved first,
   reload before saving.
 - Text is rendered as plain text, never as executable HTML.
