@@ -10,6 +10,7 @@ import { normalizeEmail } from "@/lib/security/identifiers";
 import { EMAIL_REGEX } from "@/lib/utils";
 import { securityText } from "@/lib/i18n/security";
 import { t } from "@/lib/i18n";
+import { safeNextPath } from "@/lib/security/redirects";
 
 export interface LoginState {
   message: string;
@@ -55,6 +56,8 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
   }
 
   await logSecurityEvent("login.password_ok", data.user.id);
+  const next = safeNextPath(formData.get("next"));
+  if (next) redirect(`/security?next=${encodeURIComponent(next)}`);
   redirect("/security");
 }
 

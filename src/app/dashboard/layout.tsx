@@ -3,9 +3,13 @@ import { requireStudent } from "@/lib/auth";
 import { StudentNav } from "@/components/dashboard/StudentNav";
 import { signOut } from "@/app/actions/auth";
 import { t } from "@/lib/i18n";
+import { getReviewState } from "@/lib/reviews";
+import { reviewText as r } from "@/lib/i18n/reviews";
+import { buttonClass } from "@/components/ui/button";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { profile } = await requireStudent();
+  const { profile, supabase } = await requireStudent();
+  const review = await getReviewState(supabase);
 
   return (
     <div className="min-h-screen">
@@ -31,6 +35,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8">
         <p className="mb-6 text-2xl font-semibold">{t.dashboard.hello(profile.full_name.split(" ")[0] || "")}</p>
+        {review.eligible && !review.has_review && <section className="card mb-6 border-brand-200 bg-brand-50">
+          <h2 className="text-2xl font-bold">{r.invitationTitle}</h2>
+          <p className="my-3 text-lg">{r.invitation}</p>
+          <Link href="/dashboard/review" className={buttonClass("primary", "lg")}>{r.write}</Link>
+        </section>}
         {children}
       </main>
     </div>

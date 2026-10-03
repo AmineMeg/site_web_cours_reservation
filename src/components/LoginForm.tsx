@@ -7,10 +7,11 @@ import { Notice } from "@/components/ui/Notice";
 import { t } from "@/lib/i18n";
 import { Turnstile } from "@/components/Turnstile";
 
-export function LoginForm() {
+export function LoginForm({ next = null }: { next?: string | null }) {
   const [state, action] = useActionState<LoginState, FormData>(signIn, { message: "" });
   return (
     <form action={action} className="space-y-5">
+      {next && <input type="hidden" name="next" value={next} />}
       <div>
         <label htmlFor="email" className="label">
           {t.login.email}

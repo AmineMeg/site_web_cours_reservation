@@ -102,7 +102,7 @@ test("Resend and webhook receive HTML plus unchanged plain text; failures do not
   const { sendEmail } = mocked("src/lib/email.ts", {});
   try {
     console.error = (...args) => logs.push(args);
-    global.fetch = async (url, options) => { calls.push({ url, body: JSON.parse(options.body) }); return new Response("", { status: 200 }); };
+    global.fetch = async (url, options) => { calls.push({ url, headers: options.headers, body: JSON.parse(options.body) }); return new Response("", { status: 200 }); };
     process.env.RESEND_API_KEY = "test-key";
     delete process.env.EMAIL_WEBHOOK_URL;
     assert.deepEqual(await sendEmail(payload), { ok: true });
@@ -116,6 +116,14 @@ test("Resend and webhook receive HTML plus unchanged plain text; failures do not
     assert.equal(calls[1].body.html, calls[0].body.html);
     assert.equal(calls[1].body.replyTo, payload.replyTo);
     assert.equal(calls[1].body.presentation, undefined);
+    process.env.RESEND_API_KEY = "test-key";
+    await sendEmail({ ...payload, idempotencyKey: "review-invitation-test" });
+    assert.equal(calls[2].headers["Idempotency-Key"], "review-invitation-test");
+    assert.equal(calls[2].body.idempotencyKey, undefined);
+    delete process.env.RESEND_API_KEY;
+    await sendEmail({ ...payload, idempotencyKey: "review-invitation-test" });
+    assert.equal(calls[3].headers["Idempotency-Key"], "review-invitation-test");
+    assert.equal(calls[3].body.idempotencyKey, undefined);
     global.fetch = async () => new Response("private provider response", { status: 500 });
     assert.deepEqual(await sendEmail(payload), { ok: false });
     delete process.env.EMAIL_WEBHOOK_URL;

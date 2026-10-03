@@ -22,7 +22,7 @@ function renderPreview(content, selected = "heroTitle") {
 test("visual preview maps every homepage field exactly once and exposes keyboard-editable text", () => {
   const html = renderPreview(homepageDefaults);
   const fields = [...html.matchAll(/data-homepage-field="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(fields.sort(), Object.keys(homepageDefaults).sort());
+  assert.deepEqual(fields.sort(), Object.values(homepageSections).flat().sort());
   assert.equal((html.match(/role="button"/g) || []).length, fields.length);
   assert.equal((html.match(/tabindex="0"/g) || []).length, fields.length);
   assert.equal((html.match(/aria-pressed="true"/g) || []).length, 1);

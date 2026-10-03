@@ -12,9 +12,11 @@ compatible host for the teacher's commercial website.
 | Two-step verification and account security | `/security` / `/security/settings` | Teacher & students |
 | Teacher panel | `/admin` (New contacts · My students · Schedule · Messages) | Teacher only |
 | Homepage editor | `/admin/website` | Teacher only, MFA required |
+| Student review approval | `/admin/reviews` | Teacher only, MFA required |
 | Blog editor | `/admin/blog` | Teacher only, MFA required |
 | Public articles | `/blog` | Everyone; published articles only |
 | Student portal | `/dashboard` (Book · Profile · Contact teacher) | Students only |
+| Submit / withdraw a testimonial | `/dashboard/review` | Students only; submit after five past lessons |
 
 ## Architecture
 
@@ -326,6 +328,57 @@ Unused files continue to count towards Supabase storage usage.
 - Text is rendered as plain text, never as executable HTML.
 - Editing the visible teacher/site name does not change login email addresses,
   notification recipients or the teacher's account; those remain separate settings.
+
+### Real student testimonials
+
+Run [`supabase/student-reviews.sql`](supabase/student-reviews.sql) in Supabase
+**after the base schema, security and student-password-login migrations, before
+deploying this version**. It is safe to rerun and preserves homepage texts, photos
+and submitted reviews.
+
+- Students qualify after **five lessons whose end time has passed and whose
+  status is booked**. Gifted lessons count too; future, ongoing and cancelled
+  lessons do not count. Existing students qualify too.
+- Eligible students who have not submitted see an invitation in their dashboard
+  and can open **Meu depoimento**. Submission is optional and requires explicit
+  publication consent, a chosen public name (first name recommended) and
+  20–2,000 characters of text. Each student submits once.
+- The teacher opens **Depoimentos** to approve or decline. Only approved reviews
+  from active students appear publicly. The teacher cannot rewrite the student's
+  words or public name. A timestamp check protects concurrent moderation/withdrawal.
+- Students can withdraw their review at any time. It disappears publicly and
+  cannot be republished by the teacher. The withdrawn record remains visible
+  privately and does not generate another invitation.
+- The public endpoint exposes only review ID, chosen name and quote: never email,
+  phone, objectives or student account ID.
+- Fictional quotes and decorative five-star ratings are no longer displayed.
+  Legacy testimonial fields remain stored for compatibility, but are excluded
+  from editing and rendering. Without approved reviews, the public section and
+  its navigation link are hidden. The editor shows an empty state or the same
+  approved reviews as the public page; only the section title remains editable.
+
+`vercel.json` schedules `/api/cron/review-invitations` daily at **12:00 UTC
+(09:00 Belo Horizonte)**. Configure `CRON_SECRET`, the Supabase service-role key
+and the existing Resend/webhook email settings in Vercel. An external scheduler
+can call the endpoint with `Authorization: Bearer <CRON_SECRET>` if the deployment
+plan does not support scheduled jobs.
+
+Each run claims up to ten unsent invitations, sends in paced batches of two,
+and uses a Portuguese HTML email with a normal login-protected link to
+`/dashboard/review`. The link does not grant account access.
+The requested private page is preserved through password login using the existing
+allowlisted local-path helper; authentication and role checks still apply.
+Email arrives on the next scheduled run (or later if there is a backlog); the dashboard invitation
+is available immediately after the fifth lesson ends.
+Submitted, declined and withdrawn reviews suppress further invitations.
+Successful sends are recorded; failures retry on a later run, at least 20 hours
+apart, and produce logs and a non-success HTTP status. Overlapping runs cannot
+claim the same live lease. An unconfigured provider fails before claiming.
+
+Provider requests carry a stable `Idempotency-Key`. Custom webhooks must honor
+that header; Resend deduplicates within its provider retention window. Delivery
+cannot be guaranteed exactly once if a process crashes after sending but before
+recording success. Automated tests do not send real invitations.
 
 ### Blog
 

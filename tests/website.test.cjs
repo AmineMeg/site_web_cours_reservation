@@ -4,11 +4,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const { load } = require("./load-typescript.cjs");
-const { homepageDefaults, parseHomepageContent, homepageSections, homepageFieldLimit } = load("src/lib/website-content.ts");
+const { homepageDefaults, parseHomepageContent, homepageSections, homepageFieldLimit, legacyTestimonialKeys } = load("src/lib/website-content.ts");
 
 test("every homepage field has an editor section and valid defaults", () => {
   assert.deepEqual(parseHomepageContent(homepageDefaults), homepageDefaults);
-  assert.deepEqual(Object.values(homepageSections).flat().sort(), Object.keys(homepageDefaults).sort());
+  assert.deepEqual(Object.values(homepageSections).flat().sort(), Object.keys(homepageDefaults).filter(key => !legacyTestimonialKeys.includes(key)).sort());
 });
 test("homepage validation rejects missing/extra keys, wrong types and exact length overflow", () => {
   assert.equal(parseHomepageContent(null), null);

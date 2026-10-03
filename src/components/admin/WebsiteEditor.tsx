@@ -12,8 +12,10 @@ import { supabaseUrl } from "@/lib/supabase/env";
 import { MAX_IMAGE_BYTES } from "@/lib/blog/validation";
 import { websiteText as w } from "@/lib/i18n/website";
 import type { ActionResult } from "@/lib/types";
+import type { PublicReview } from "@/lib/reviews";
+import { reviewText as r } from "@/lib/i18n/reviews";
 
-export function WebsiteEditor({ initial, revision }: { initial: HomepageContent; revision: number }) {
+export function WebsiteEditor({ initial, revision, reviews = [] }: { initial: HomepageContent; revision: number; reviews?: PublicReview[] }) {
   const [content, setContent] = useState(initial);
   const [savedContent, setSavedContent] = useState(initial);
   const [version, setVersion] = useState(revision);
@@ -122,6 +124,7 @@ export function WebsiteEditor({ initial, revision }: { initial: HomepageContent;
             }
           })}>{pending ? w.saving : w.save}</button>
         <a href="/" target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "md")}>{w.view}</a>
+        <a href="/admin/reviews" className={buttonClass("secondary", "md")}>{r.manage}</a>
         <button type="button" disabled={busy || !changed} className="min-h-12 px-3 font-semibold text-stone-600 underline"
           onClick={() => {
             if (window.confirm(w.discardConfirm)) { setContent({ ...savedContent }); setResult(null); }
@@ -150,12 +153,16 @@ export function WebsiteEditor({ initial, revision }: { initial: HomepageContent;
         </iframe>
         {previewRoot && createPortal(
           <HomepageEditingContext.Provider value={{ selected, select: (key) => selectField(key, true) }}>
-            <Homepage content={content} preview />
+            <Homepage content={content} preview reviews={reviews} />
           </HomepageEditingContext.Provider>, previewRoot)}
       </section>
       <aside ref={editorPanel} className="min-h-0 overflow-auto overscroll-contain rounded-2xl border-2 border-brand-200 bg-white p-5" aria-label={w.editing}>
         <p className="mb-2 hidden text-sm font-bold uppercase tracking-wide text-brand-700 xl:block">{w.editing}</p>
         <fieldset disabled={busy} className="space-y-4">
+          {section === "testimonials" && <div className="rounded-xl bg-stone-50 p-3">
+            <p className="mb-3 text-stone-600">{r.adminIntro}</p>
+            <a href="/admin/reviews" className={buttonClass("secondary", "md", "w-full")}>{r.manage}</a>
+          </div>}
           <div>
             <p className="mb-1 hidden text-sm text-stone-500 xl:block">{w.sections[section]}</p>
             {photoSelected ? <div className="space-y-3">

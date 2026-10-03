@@ -4,6 +4,7 @@ import { siteConfig } from "@/lib/config";
 import { t } from "@/lib/i18n";
 import { emailText as e } from "@/lib/i18n/email";
 import { teacherBookingText as tb } from "@/lib/i18n/teacher-booking";
+import { reviewText as r } from "@/lib/i18n/reviews";
 
 function spaceAction(path: string, label: string) {
   return { label, url: new URL(path, siteConfig.siteUrl).href };
@@ -102,5 +103,18 @@ export function sendStudentMessageToTeacher(p: { name: string; email: string; me
     text: t.emails.studentMessage.body(p),
     replyTo: p.email,
     presentation: { title: e.studentMessage, preview: e.messagePreview, action: spaceAction("/admin/messages", e.teacherSpace) },
+  });
+}
+
+export function sendReviewInvitation(p: { id: string; name: string; email: string }) {
+  const action = spaceAction("/dashboard/review", r.write);
+  return sendEmail({
+    to: p.email, subject: r.emailSubject,
+    text: `${e.hello(p.name)}\n\n${r.emailIntro}\n\n${r.emailNote}\n\n${action.url}`,
+    replyTo: siteConfig.teacherEmail, idempotencyKey: `review-invitation-${p.id}`,
+    presentation: {
+      title: r.invitationTitle, preview: r.emailIntro,
+      paragraphs: [e.hello(p.name), r.emailIntro], note: r.emailNote, action,
+    },
   });
 }

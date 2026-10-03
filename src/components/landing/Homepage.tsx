@@ -5,15 +5,16 @@ import { Testimonials } from "./Testimonials";
 import { ContactForm } from "./ContactForm";
 import type { HomepageContent } from "@/lib/website-content";
 import { HomepageText } from "./HomepageText";
+import type { PublicReview } from "@/lib/reviews";
 
-export function Homepage({ content, preview = false }: { content: HomepageContent; preview?: boolean }) {
+export function Homepage({ content, preview = false, reviews = [] }: { content: HomepageContent; preview?: boolean; reviews?: PublicReview[] }) {
   return (
     <>
-      <SiteHeader content={content} preview={preview} />
+      <SiteHeader content={content} preview={preview} hasReviews={preview || reviews.length > 0} />
       <main>
         <Hero content={content} preview={preview} />
         <About content={content} />
-        <Testimonials content={content} />
+        <Testimonials content={content} reviews={reviews} preview={preview} />
         <section id="contact" className="scroll-mt-20 bg-white py-20">
           <div className="mx-auto max-w-2xl px-4">
             <h2 className="text-center text-3xl font-bold sm:text-4xl"><HomepageText field="contactTitle">{content.contactTitle}</HomepageText></h2>

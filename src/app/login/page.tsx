@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LoginForm } from "@/components/LoginForm";
 import { t } from "@/lib/i18n";
+import { safeNextPath } from "@/lib/security/redirects";
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const next = safeNextPath((await searchParams).next);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect("/security");
+  if (user) redirect(next ? `/security?next=${encodeURIComponent(next)}` : "/security");
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-accent-50 px-4 py-12">
@@ -18,7 +20,7 @@ export default async function LoginPage() {
         <div className="card">
           <h1 className="text-3xl font-bold">{t.login.title}</h1>
           <p className="mb-8 mt-2 text-lg text-stone-600">{t.login.subtitle}</p>
-          <LoginForm />
+          <LoginForm next={next} />
           <Link href="/auth/forgot-password" className="mt-6 inline-block font-semibold text-brand-700 underline">{t.login.forgot}</Link>
         </div>
       </div>

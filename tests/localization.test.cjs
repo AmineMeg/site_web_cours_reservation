@@ -54,7 +54,6 @@ test("landing components render the Portuguese defaults and stored migration con
   for (const [name, expected] of [
     ["Hero", "Fale espanhol com confiança"],
     ["About", "Conheça sua professora"],
-    ["Testimonials", "O que meus alunos dizem"],
   ]) {
     const component = load(`src/components/landing/${name}.tsx`)[name];
     for (const props of [{}, { content: migratedContent }]) {
@@ -62,6 +61,8 @@ test("landing components render the Portuguese defaults and stored migration con
       assert.ok(html.includes(expected));
       assert.doesNotMatch(html, /Meet your teacher|What my students say|Speak Spanish with confidence/);
     }
+    const Testimonials = load("src/components/landing/Testimonials.tsx").Testimonials;
+    assert.ok(renderToStaticMarkup(React.createElement(Testimonials, { content: migratedContent, preview: true })).includes("O que meus alunos dizem"));
   }
   const layout = fs.readFileSync(path.join(root, "src/app/layout.tsx"), "utf8");
   assert.match(layout, /<html lang=\{t.locale\}>/);

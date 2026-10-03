@@ -32,6 +32,12 @@ export const homepageDefaults = {
 
 export type HomepageContent = { [K in keyof typeof homepageDefaults]: string };
 export type HomepageKey = keyof HomepageContent;
+// Legacy testimonial text stays in saved content for compatibility, but is never displayed or edited.
+export const legacyTestimonialKeys: HomepageKey[] = [
+  "testimonial1Quote", "testimonial1Name", "testimonial1Detail",
+  "testimonial2Quote", "testimonial2Name", "testimonial2Detail",
+  "testimonial3Quote", "testimonial3Name", "testimonial3Detail",
+];
 export type HomepageSection = "identity" | "hero" | "about" | "testimonials" | "contact" | "photos";
 export const homepageImageKeys = ["heroImage", "teacherImage"] as const;
 export type HomepageImageKey = typeof homepageImageKeys[number];
@@ -53,7 +59,7 @@ export const homepageSections: Record<HomepageSection, HomepageKey[]> = {
   identity: ["siteName", "teacherName", "footerText"],
   hero: ["heroBadge", "heroTitle", "heroSubtitle", "heroPrimary", "heroSecondary"],
   about: ["aboutTitle", "aboutRole", "aboutParagraph1", "aboutParagraph2", "aboutParagraph3", "stat1Value", "stat1Label", "stat2Value", "stat2Label", "stat3Value", "stat3Label"],
-  testimonials: ["testimonialsTitle", "testimonial1Quote", "testimonial1Name", "testimonial1Detail", "testimonial2Quote", "testimonial2Name", "testimonial2Detail", "testimonial3Quote", "testimonial3Name", "testimonial3Detail"],
+  testimonials: ["testimonialsTitle"],
   contact: ["contactTitle", "contactSubtitle", "contactName", "contactEmail", "contactPhone", "contactMessage", "contactPlaceholder", "contactSubmit"],
   photos: [...homepageImageKeys],
 };

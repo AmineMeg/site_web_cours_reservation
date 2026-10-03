@@ -8,6 +8,7 @@ export interface EmailPayload {
   text: string;
   replyTo?: string;
   presentation?: EmailPresentation;
+  idempotencyKey?: string;
 }
 
 export function emailIsConfigured(): boolean {
@@ -26,7 +27,7 @@ export async function sendEmail(payload: EmailPayload): Promise<{ ok: boolean }>
     const html = renderEmailHtml(payload.text, payload.presentation ?? {
       title: payload.subject, preview: emailText.automatic,
     });
-    const { presentation: _presentation, ...message } = payload;
+    const { presentation: _presentation, idempotencyKey, ...message } = payload;
     const resendKey = process.env.RESEND_API_KEY?.trim();
     if (resendKey) {
       const res = await fetch("https://api.resend.com/emails", {
@@ -36,6 +37,7 @@ export async function sendEmail(payload: EmailPayload): Promise<{ ok: boolean }>
         headers: {
           Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",
+          ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
         },
         body: JSON.stringify({
           from: process.env.EMAIL_FROM || "onboarding@resend.dev",
@@ -56,7 +58,7 @@ export async function sendEmail(payload: EmailPayload): Promise<{ ok: boolean }>
         method: "POST",
         cache: "no-store",
         signal: AbortSignal.timeout(10_000),
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
         body: JSON.stringify({ ...message, html }),
       });
       if (!res.ok) console.error("[email] Webhook delivery failed", res.status);

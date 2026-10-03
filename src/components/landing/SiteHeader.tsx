@@ -4,7 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import type { HomepageContent } from "@/lib/website-content";
 import { HomepageText } from "./HomepageText";
 
-export function SiteHeader({ content, preview = false }: { content?: HomepageContent; preview?: boolean }) {
+export function SiteHeader({ content, preview = false, hasReviews = true }: { content?: HomepageContent; preview?: boolean; hasReviews?: boolean }) {
   const brand = <>¡Hola! <span className="text-stone-900"><HomepageText field="siteName">{content?.siteName ?? t.common.appName}</HomepageText></span></>;
   return (
     <header className={`${preview ? "" : "sticky top-0 z-40 "}border-b border-stone-200 bg-white/90 backdrop-blur`}>
@@ -15,9 +15,9 @@ export function SiteHeader({ content, preview = false }: { content?: HomepageCon
           <a href="/#about" className="hidden px-2 py-2 font-medium text-stone-700 hover:text-brand-700 md:block">
             {t.nav.about}
           </a>
-          <a href="/#testimonials" className="hidden px-2 py-2 font-medium text-stone-700 hover:text-brand-700 md:block">
+          {hasReviews && <a href="/#testimonials" className="hidden px-2 py-2 font-medium text-stone-700 hover:text-brand-700 md:block">
             {t.nav.testimonials}
-          </a>
+          </a>}
           <a href="/#contact" className="hidden px-2 py-2 font-medium text-stone-700 hover:text-brand-700 md:block">
             {t.nav.contact}
           </a>

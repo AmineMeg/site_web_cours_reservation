@@ -1,35 +1,26 @@
 import { t } from "@/lib/i18n";
-import type { HomepageContent, HomepageKey } from "@/lib/website-content";
+import type { HomepageContent } from "@/lib/website-content";
+import type { PublicReview } from "@/lib/reviews";
+import { reviewText as r } from "@/lib/i18n/reviews";
 import { HomepageText } from "./HomepageText";
 
-export function Testimonials({ content }: { content?: HomepageContent }) {
-  const s = content ? {
-    title: content.testimonialsTitle,
-    items: [
-      { quote: content.testimonial1Quote, name: content.testimonial1Name, detail: content.testimonial1Detail },
-      { quote: content.testimonial2Quote, name: content.testimonial2Name, detail: content.testimonial2Detail },
-      { quote: content.testimonial3Quote, name: content.testimonial3Name, detail: content.testimonial3Detail },
-    ],
-  } : t.landing.testimonials;
-  return (
-    <section id="testimonials" className="scroll-mt-20 bg-stone-50 py-20">
-      <div className="mx-auto max-w-6xl px-4">
-        <h2 className="text-center text-3xl font-bold sm:text-4xl"><HomepageText field="testimonialsTitle">{s.title}</HomepageText></h2>
-        <ul className="mt-12 grid gap-6 md:grid-cols-3">
-          {s.items.map((item, index) => (
-            <li key={index} className="card flex flex-col">
-              <p aria-hidden className="text-2xl text-accent-500">
-                ★★★★★
-              </p>
-              <blockquote className="mt-4 flex-1 text-lg leading-relaxed text-stone-700">“<HomepageText field={`testimonial${index + 1}Quote` as HomepageKey}>{item.quote}</HomepageText>”</blockquote>
-              <footer className="mt-6 border-t border-stone-100 pt-4">
-                <p className="font-bold text-stone-900"><HomepageText field={`testimonial${index + 1}Name` as HomepageKey}>{item.name}</HomepageText></p>
-                <p className="text-sm text-stone-500"><HomepageText field={`testimonial${index + 1}Detail` as HomepageKey}>{item.detail}</HomepageText></p>
-              </footer>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
+export function Testimonials({ content, reviews = [], preview = false }: {
+  content?: HomepageContent; reviews?: PublicReview[]; preview?: boolean;
+}) {
+  if (!reviews.length && !preview) return null;
+  return <section id="testimonials" className="scroll-mt-20 bg-stone-50 py-20">
+    <div className="mx-auto max-w-6xl px-4">
+      <h2 className="text-center text-3xl font-bold sm:text-4xl">
+        <HomepageText field="testimonialsTitle">{content?.testimonialsTitle ?? t.landing.testimonials.title}</HomepageText>
+      </h2>
+      {reviews.length ? <ul className="mt-12 grid gap-6 md:grid-cols-3">
+        {reviews.map((review) => <li key={review.id} className="card flex flex-col">
+          <blockquote className="flex-1 whitespace-pre-wrap [overflow-wrap:anywhere] text-lg leading-relaxed text-stone-700">“{review.quote}”</blockquote>
+          <footer className="mt-6 border-t border-stone-100 pt-4">
+            <p className="[overflow-wrap:anywhere] font-bold text-stone-900">{review.display_name}</p>
+          </footer>
+        </li>)}
+      </ul> : <p className="card mt-8 text-center text-lg text-stone-600">{r.previewEmpty}</p>}
+    </div>
+  </section>;
 }
