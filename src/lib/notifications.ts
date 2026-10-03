@@ -13,11 +13,12 @@ function spaceAction(path: string, label: string) {
 
 /** All automatic emails of the app, in one place. */
 
-export function notifyTeacherNewContact(c: { name: string; email: string; phone: string; message: string; country?: string; city?: string; timezone?: string }) {
+export function notifyTeacherNewContact(c: { name: string; email: string; phone: string; message: string; country?: string; city?: string; timezone?: string; trialWhen?: string }) {
   return sendEmail({
     to: siteConfig.teacherEmail,
     subject: t.emails.newContact.subject(c.name),
-    text: t.emails.newContact.body(c) + (c.timezone ? `\n\n${c.city}, ${c.country}\n${rules.timezone}: ${c.timezone}` : ""),
+    text: t.emails.newContact.body(c) + (c.trialWhen ? `\n\n${rules.trialBooked}\n${c.trialWhen}` : "") +
+      (c.timezone ? `\n\n${c.city}, ${c.country}\n${rules.timezone}: ${c.timezone}` : ""),
     replyTo: c.email,
     presentation: { title: e.newContact, preview: e.contactPreview, action: spaceAction("/admin/contacts", e.teacherSpace) },
   });
@@ -113,15 +114,18 @@ export function sendTrialInvitation(p: { name: string; email: string; token: str
 }
 
 export async function sendTrialBookingEmails(p: {
-  name: string; email: string; when: string; teacherWhen: string; cancelled?: boolean; message?: string;
+  name: string; email: string; when: string; teacherWhen: string; cancelled?: boolean; message?: string; token?: string;
 }) {
   const title = p.cancelled ? rules.cancelled : rules.trialBooked;
+  const action = p.token ? spaceAction(`/trial/${p.token}`, rules.manageTrial) : undefined;
   const results = await Promise.all([
     sendEmail({
       to: p.email, subject: `${title} · ${p.when}`, replyTo: siteConfig.teacherEmail,
-      text: `${e.hello(p.name)}\n\n${title}\n${rules.trialLabel}\n${p.when}\n${p.message ?? ""}`,
+      text: `${e.hello(p.name)}\n\n${title}\n${rules.trialLabel}\n${p.when}\n${p.message ?? ""}` +
+        (action ? `\n\n${rules.linkDuration}\n${action.url}` : ""),
       presentation: { title, preview: p.when, paragraphs: [e.hello(p.name), rules.trialLabel],
-        details: [{ label: e.lessonTime, value: p.when }, ...(p.message ? [{ label: e.teacherMessage, value: p.message }] : [])] },
+        details: [{ label: e.lessonTime, value: p.when }, ...(p.message ? [{ label: e.teacherMessage, value: p.message }] : [])],
+        ...(action ? { action, note: rules.linkDuration } : {}) },
     }),
     sendEmail({
       to: siteConfig.teacherEmail, subject: `${title} · ${p.name} · ${p.teacherWhen}`, replyTo: p.email,

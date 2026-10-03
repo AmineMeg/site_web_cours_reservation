@@ -9,44 +9,62 @@ const contact = { id: "contact", name: "Ana", email: "ana@test.com", phone: "123
 
 function form(values = {}) {
   const data = new FormData();
-  for (const [key, value] of Object.entries({ name: "Ana", email: "ANA@test.com", country: "France", city: "Paris", timezone: "Europe/Paris", ...values })) data.set(key, value);
+  for (const [key, value] of Object.entries({ name: "Ana", email: "ANA@test.com", country: "France", city: "Paris", timezone: "Europe/Paris",
+    startsAt: "2026-10-05T12:00:00Z", ...values })) data.set(key, value);
   return data;
 }
 
-test("contact action validates location, rate-limits and sends a hashed seven-day invitation without creating Auth users", async () => {
+test("contact action books atomically, validates location/slot, rate-limits and sends confirmation without Auth users", async () => {
   const calls = [], emails = [];
-  let allowed = true, delivery = true;
+  let allowed = true, delivery = true, error = null;
   const load = createLoader({
     "server-only": {},
+    "next/cache": { revalidatePath() {} },
+    "@/lib/auth": { getSettings: async () => ({ timezone: "America/Sao_Paulo" }) },
     "@/lib/security/rate-limit": { limitTrialContact: async (email) => { calls.push(["rate", email]); return allowed; } },
     "@/lib/supabase/admin": { createAdminClient: () => ({
-      rpc: async (name, data) => { calls.push([name, data]); return { data: "contact", error: null }; },
+      rpc: async (name, data) => { calls.push([name, data]); return {
+        data: error ? null : { id: "trial", starts_at: data.p_start, ends_at: "2026-10-05T12:30:00Z" }, error,
+      }; },
       auth: { admin: { generateLink: () => { throw new Error("No trial Auth accounts"); } } },
     }) },
     "@/lib/notifications": {
-      sendTrialInvitation: async (data) => { emails.push(data); return { ok: delivery }; },
+      sendTrialBookingEmails: async (data) => { emails.push(data); return { ok: delivery }; },
       notifyTeacherNewContact: async () => ({ ok: true }),
     },
   });
   const { submitContact } = load("src/app/actions/contact.ts");
   assert.equal((await submitContact({}, form({ timezone: "Europe/Bad" }))).status, "error");
+  assert.equal((await submitContact({}, form({ startsAt: "" }))).errors.slot.length > 0, true);
+  assert.equal((await submitContact({}, form({ startsAt: "not-a-date" }))).status, "error");
   assert.equal(calls.length, 0);
   allowed = false;
   assert.equal((await submitContact({}, form())).status, "error");
   assert.equal(emails.length, 0);
   allowed = true;
   assert.equal((await submitContact({}, form())).status, "success");
-  assert.equal(calls.at(-1)[0], "issue_trial_link");
+  assert.equal(calls.at(-1)[0], "submit_trial_booking");
   assert.equal(calls.at(-1)[1].p_email, "ana@test.com");
   assert.equal(calls.at(-1)[1].p_timezone, "Europe/Paris");
   const { trialHash } = load("src/lib/trial.ts");
   assert.equal(calls.at(-1)[1].p_hash, trialHash(emails[0].token));
   assert.notEqual(calls.at(-1)[1].p_hash, emails[0].token);
+  assert.equal(calls.at(-1)[1].p_start, "2026-10-05T12:00:00Z");
+  assert.match(emails[0].when, /14:00.*Europe\/Paris/);
+  assert.match(emails[0].teacherWhen, /09:00.*America\/Sao Paulo/);
   assert.equal(trialHash("bad"), null);
   delivery = false;
   const saved = await submitContact({}, form());
   assert.equal(saved.status, "success");
   assert.match(saved.message, /não conseguimos enviar/);
+  assert.equal(saved.booking.timezone, "Europe/Paris");
+  assert.equal(saved.trialUrl, `/trial/${emails.at(-1).token}`);
+  error = { message: "SLOT_NOT_AVAILABLE", code: "P0001" };
+  const before = emails.length;
+  const stale = await submitContact({}, form());
+  assert.equal(stale.status, "error");
+  assert.ok(stale.errors.slot);
+  assert.equal(emails.length, before);
 });
 
 test("trial action relies on token-scoped RPCs, uses each recipient's timezone and reports saved-but-email-failed", async () => {
@@ -155,7 +173,7 @@ test("public and admin surfaces show policy, location fields, trial labels and a
   assert.match(formHtml, /name="country"[^>]*value="Brasil"/);
   assert.match(formHtml, /type="hidden" name="timezone"/);
   assert.doesNotMatch(formHtml, /<select/);
-  assert.match(formHtml, /30 minutos.*sem criar uma conta/);
+  assert.match(formHtml, /Preencha seus dados para confirmar/);
   const { ContactCard } = load("src/components/admin/ContactCard.tsx");
   const html = renderToStaticMarkup(React.createElement(ContactCard, { contact, receivedLabel: "hoje", daysLeft: 30,
     now: Date.parse("2026-10-04T12:00:00Z"), timezone: "America/Sao_Paulo", hasTrialHistory: true,

@@ -54,10 +54,10 @@ export const pt: Dictionary = {
     contact: {
       title: "Entre em contato para começar",
       company: "Empresa",
-      subtitle: "Conte um pouco sobre você e agende uma aula experimental online gratuita de 30 minutos.",
+      subtitle: "Escolha um horário nos próximos 30 dias e preencha seus dados para reservar sua aula experimental online gratuita.",
       name: "Seu nome", email: "Seu e-mail", phone: "Seu telefone", message: "Mensagem",
       messagePlaceholder: "Ex.: Sou iniciante e quero viajar para a Espanha nas próximas férias.",
-      submit: "Enviar meu pedido", sending: "Enviando…",
+      submit: "Reservar minha aula experimental", sending: "Enviando…",
       success: "Obrigada! Sua mensagem foi enviada. Entrarei em contato em breve.",
       errors: { name: "Informe seu nome.", email: "Informe um e-mail válido.", phone: "Este telefone é muito longo.", message: "Sua mensagem é muito longa (máximo de 2.000 caracteres)." },
     },
@@ -177,7 +177,7 @@ export const pt: Dictionary = {
   emails: {
     newContact: {
       subject: (name) => `Novo aluno interessado: ${name} | Eliane Teixeira`,
-      body: (c) => `Alguém quer aprender espanhol com você!\n\nNome: ${c.name}\nE-mail: ${c.email}\nTelefone: ${c.phone || "-"}\n\nMensagem:\n${c.message || "-"}\n\nO contato recebeu um link para agendar uma aula experimental gratuita de 30 minutos. Acompanhe o agendamento na área da professora. Você poderá decidir sobre a criação da conta quando a aula experimental começar.`,
+      body: (c) => `Alguém quer aprender espanhol com você!\n\nNome: ${c.name}\nE-mail: ${c.email}\nTelefone: ${c.phone || "-"}\n\nMensagem:\n${c.message || "-"}\n\nAcompanhe a aula experimental gratuita de 30 minutos na área da professora. Você poderá decidir sobre a criação da conta quando a aula experimental começar.`,
     },
     credentials: {
       subject: "Boas-vindas! Ative sua conta de espanhol",

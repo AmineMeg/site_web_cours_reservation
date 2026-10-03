@@ -70,7 +70,8 @@ src/
    (If pg_cron is not enabled, enable it in *Database → Extensions* and run the script again; it is safe to re-run.)
    Then run the feature migrations in order: `student-password-login.sql`,
    `website.sql`, `blog.sql`, `homepage-images.sql`, `student-reviews.sql`,
-   `teacher-booking.sql`, **`trial-and-credit-rules.sql` last**, and `eliane-teixeira.sql`.
+   `teacher-booking.sql`, `trial-and-credit-rules.sql`, `eliane-teixeira.sql`,
+   and **`public-trial-booking.sql` last**.
 3. **Auth settings**: *Authentication → Sign In / Providers* → turn **off** "Allow new users to sign up"
    (only the teacher creates student accounts).
 4. **Teacher account**: *Authentication → Users → Add user* (email + password, "Auto confirm"), then in the SQL editor:
@@ -443,22 +444,40 @@ window. The previous contact form used anonymous inserts and immediate account
 creation; do not use that older form or create accounts between migration and deployment.
 
 1. Run [`supabase/trial-and-credit-rules.sql`](supabase/trial-and-credit-rules.sql)
-   **last**, after the base schema, security, student-password-login, teacher-booking
-   and student-reviews migrations. Reapply it last if any older script is rerun.
+   after the base schema, security, student-password-login, teacher-booking
+   and student-reviews migrations. If an older script is rerun, reapply this script
+   followed by `public-trial-booking.sql`.
 2. Run [`supabase/eliane-teixeira.sql`](supabase/eliane-teixeira.sql) after the
    website migration to rename the former default identity to **Eliane Teixeira**.
    It preserves photos, custom text not containing the former name and actual reviews.
-3. Set `NEXT_PUBLIC_TEACHER_NAME=Eliane Teixeira` and update only the display name
+3. Run [`supabase/public-trial-booking.sql`](supabase/public-trial-booking.sql) **last**.
+   It adds atomic calendar-first onboarding and a rolling 30-day trial horizon.
+   Rerunning is safe and preserves existing bookings, contacts, credits and custom
+   homepage text. It changes only the former default contact subtitle and submit label.
+4. Set `NEXT_PUBLIC_TEACHER_NAME=Eliane Teixeira` and update only the display name
    of `EMAIL_FROM`, retaining the verified sending address. Ensure
    `NEXT_PUBLIC_SITE_URL=https://professora-teixeira.site`, email credentials and
    `SECURITY_SECRET` are configured, then deploy.
 
-**Contact to student:** the contact form requires country (default **Brasil**, editable)
+**Contact to student:** the public contact section first shows available **30-minute**
+trials over the next **30 days**, regrouped into the visitor's browser-local days
+and hours (including daylight saving). Only free timestamps are sent to the browser,
+never contact/student details. This trial horizon is independent of the regular
+lesson booking window; teacher working hours, blocks, notice and overlaps still apply.
+Clicking a time opens the contact form with a visible summary and an option to go back.
+Selecting does not hold the slot: availability is checked again on submission.
+
+The contact form requires country (default **Brasil**, editable)
 and city. Its IANA timezone is detected automatically from the browser and submitted
 in a hidden field, without asking the visitor to choose it. Detection errors are
 shown explicitly and invalid timezones are rejected by the server.
-It creates no Supabase Auth user. It sends the contact
-a bearer link to `/trial/<token>`, valid for exactly seven days, and notifies Eliane.
+It creates no Supabase Auth user. Submission atomically saves the contact, creates
+a seven-day management link and books the selected trial. If the slot is taken, all
+database changes roll back and the visitor must choose another time. Both parties
+receive a timezone-specific booking confirmation; the contact's email and on-screen
+confirmation include the bearer link `/trial/<token>`, valid for exactly seven days.
+Eliane also receives the contact details. Email failure never undoes a saved reservation
+and is reported on-screen along with the reserved time and management link.
 Only SHA-256 hashes of random 256-bit tokens are stored; trial RPCs are server-only,
 the page is not indexed and uses a no-referrer policy. The link grants access only
 to that contact's trial, never to the student portal or other contacts. Contact
@@ -466,7 +485,7 @@ submissions are rate-limited by normalized email and trusted client IP.
 Trial booking/cancellation changes are also limited to ten attempts per link per hour.
 
 The contact can reserve **one active, free, 30-minute online trial**, using the
-teacher's working hours, blocks, notice and booking window. The seven-day limit
+teacher's working hours, blocks and notice within the 30-day trial window. The seven-day limit
 applies to using the link, not to the date of the trial. Trials and regular lessons
 share the same transaction lock and overlap checks, including exceptional teacher
 bookings. No credits are consumed. Both parties receive timezone-specific emails.
@@ -515,7 +534,7 @@ Existing profiles default to the former teacher zone until their location is upd
 
 Targeted validation:
 ```powershell
-node --test tests\trial-credit-rules.test.cjs tests\trial-workflow.test.cjs
+node --test tests\trial-credit-rules.test.cjs tests\trial-workflow.test.cjs tests\public-trial-booking.test.cjs
 npm run typecheck
 ```
 Set `PGLITE_PATH` as described below to actually execute database tests.

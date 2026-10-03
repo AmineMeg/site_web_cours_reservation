@@ -28,7 +28,7 @@ test("Brazilian dictionary covers every core key and all homepage migration text
   assert.equal(defaultSettings.timezone, tz);
   assert.deepEqual(parseHomepageContent(migratedContent), { ...migratedContent, heroImage: "", teacherImage: "" });
   const { heroImage, teacherImage, ...textDefaults } = homepageDefaults;
-  const updatedKeys = ["siteName", "teacherName", "footerText", "aboutParagraph1", "heroBadge", "contactSubtitle"];
+  const updatedKeys = ["siteName", "teacherName", "footerText", "aboutParagraph1", "heroBadge", "contactSubtitle", "contactSubmit"];
   for (const [key, value] of Object.entries(textDefaults)) {
     if (!updatedKeys.includes(key)) assert.equal(migratedContent[key], value);
   }
@@ -96,7 +96,10 @@ test("localization migration replaces stored homepage, changes timezone and pres
     await db.exec(fs.readFileSync(path.join(root, "supabase/eliane-teixeira.sql"), "utf8"));
     const eliane = await one("select content,revision from website_content");
     const { heroImage: ignoredHero, teacherImage: ignoredTeacher, ...currentDefaults } = homepageDefaults;
-    assert.deepEqual(eliane.content, currentDefaults);
+    assert.deepEqual(eliane.content, { ...currentDefaults,
+      contactSubtitle: "Conte um pouco sobre você e agende uma aula experimental online gratuita de 30 minutos.",
+      contactSubmit: migratedContent.contactSubmit,
+    });
     await db.exec(fs.readFileSync(path.join(root, "supabase/eliane-teixeira.sql"), "utf8"));
     assert.equal((await one("select revision from website_content")).revision, eliane.revision);
     assert.deepEqual(await one("select starts_at,ends_at from bookings"), before);

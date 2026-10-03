@@ -1,4 +1,4 @@
--- Run LAST, after teacher-booking.sql and student-reviews.sql.
+-- Run after teacher-booking.sql and student-reviews.sql, before public-trial-booking.sql.
 -- Existing available credits receive 12 months from this migration, once only.
 begin;
 

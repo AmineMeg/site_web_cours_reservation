@@ -10,11 +10,15 @@ import { HomepageText } from "./HomepageText";
 import { buttonClass } from "@/components/ui/button";
 import { LocationFields } from "@/components/LocationFields";
 import { lessonRules as r } from "@/lib/i18n/lesson-rules";
+import { formatDateTime } from "@/lib/dates";
+import Link from "next/link";
 
 const initialState: ContactFormState = { status: "idle", message: "" };
 
-export function ContactForm({ content, preview = false }: { content?: HomepageContent; preview?: boolean }) {
-  const [state, formAction] = useActionState(submitContact, initialState);
+export function ContactForm({ content, preview = false, startsAt, timezone, onBack }: {
+  content?: HomepageContent; preview?: boolean; startsAt?: string; timezone?: string; onBack?: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(submitContact, initialState);
   const c = {
     ...t.landing.contact,
     ...(content ? {
@@ -25,13 +29,17 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
   };
 
   if (state.status === "success") {
-    return <Notice ok>{state.message}</Notice>;
+    return <div className="space-y-4">
+      <Notice ok>{state.message}</Notice>
+      {state.booking && <p className="text-xl font-semibold">{formatDateTime(state.booking.startsAt, state.booking.timezone)}</p>}
+      {state.trialUrl && <Link href={state.trialUrl} className={buttonClass("secondary", "lg", "w-full")}>{r.manageTrial}</Link>}
+    </div>;
   }
 
   const err = state.errors ?? {};
 
   if (preview) return <div className="space-y-5">
-    <p className="text-stone-700">{r.trialInfo}</p>
+    <p className="text-stone-700">{r.publicTrialInfo}</p>
     <div><p className="label"><HomepageText field="contactName">{c.name}</HomepageText> *</p><div className="input min-h-14" aria-hidden /></div>
     <div className="grid gap-5 sm:grid-cols-2">
       <div><p className="label"><HomepageText field="contactEmail">{c.email}</HomepageText> *</p><div className="input min-h-14" aria-hidden /></div>
@@ -46,8 +54,14 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
-      <fieldset disabled={preview} className="space-y-5">
-      <p className="text-lg text-stone-700">{r.trialInfo}</p>
+      <fieldset disabled={pending} className="space-y-5">
+      {startsAt && timezone && <div className="rounded-xl bg-emerald-50 p-4">
+        <p className="font-semibold">{r.trialLabel}</p>
+        <p className="text-xl">{formatDateTime(startsAt, timezone)}</p>
+        {onBack && <button type="button" onClick={onBack} className="mt-3 text-brand-700 underline">{r.changeTrialSlot}</button>}
+      </div>}
+      <input type="hidden" name="startsAt" value={startsAt ?? ""} />
+      <p className="text-lg text-stone-700">{r.completeTrialForm}</p>
       <div>
         <label htmlFor="name" className="label">
           {c.name} *
@@ -85,7 +99,7 @@ export function ContactForm({ content, preview = false }: { content?: HomepageCo
         <label htmlFor="company">{t.landing.contact.company}</label>
         <input id="company" name="company" tabIndex={-1} autoComplete="off" />
       </div>
-      {state.status === "error" && !state.errors && <Notice ok={false}>{state.message}</Notice>}
+      {state.status === "error" && (!state.errors || err.slot) && <Notice ok={false}>{state.message}</Notice>}
       <SubmitButton pendingText={c.sending} size="xl" className="w-full">
         {c.submit}
       </SubmitButton>

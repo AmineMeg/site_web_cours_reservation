@@ -39,14 +39,13 @@ test("preview reflects changed text safely, including contact placeholder and bu
   assert.match(html, /Enviar agora/);
 });
 
-test("public homepage preserves working navigation/form and has no editor markers", () => {
+test("public homepage preserves working navigation and loads calendar before the contact form", () => {
   const html = renderToStaticMarkup(React.createElement(Homepage, { content: homepageDefaults }));
   assert.doesNotMatch(html, /data-homepage-field|aria-pressed|Editar:/);
   assert.match(html, /href="#contact"/);
   assert.match(html, /href="\/login"/);
-  assert.match(html, /<form\b/);
-  assert.match(html, /type="submit"/);
-  assert.match(html, /name="email"/);
+  assert.match(html, /Carregando os horários disponíveis/);
+  assert.doesNotMatch(html, /<form\b|name="email"/);
 });
 
 test("editor starts with a live preview and grouped access to every field", () => {
