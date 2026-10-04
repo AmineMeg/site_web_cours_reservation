@@ -20,8 +20,37 @@ import { normalizeTotpCode, totpQrDataUrl } from "@/lib/security/totp-input";
 import { safeNextPath } from "@/lib/security/redirects";
 import { securityText as s } from "@/lib/i18n/security";
 import type { ActionResult } from "@/lib/types";
+import { requireTeacher } from "@/lib/auth";
+import { limitSensitivePasswordCheck } from "@/lib/security/rate-limit";
+import { revalidatePath } from "next/cache";
+import { accountText } from "@/lib/i18n/account";
 
 const REPLACE_PATH = "/security/setup?replace=1";
+
+export async function setMyAdminMfa(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const { profile } = await requireTeacher();
+  const { user, status } = await requireRecentAuthentication({ next: "/security/settings" });
+  const value = formData.get("enabled");
+  if (value !== "true" && value !== "false") return { ok: false, message: s.error };
+  if (user.id !== profile.id || !user.email) return { ok: false, message: s.error };
+  if (!await limitSensitivePasswordCheck(user.id)) return { ok: false, message: s.tooManyAttempts };
+  if (!await verifyCurrentPassword(user.email, String(formData.get("current_password") ?? ""), user.id)) {
+    return { ok: false, message: accountText.wrongCurrentPassword };
+  }
+  const enabled = value === "true";
+  const { error } = await createAdminClient().rpc("set_admin_mfa", {
+    p_user_id: user.id, p_enabled: enabled, p_expected: status.requiresMfa,
+  });
+  if (error) {
+    console.error("[security] Admin MFA setting failed", error.code);
+    return { ok: false, message: s.error };
+  }
+  await sendSecurityAlert(user.email, enabled ? "mfa_enabled" : "mfa_disabled");
+  revalidatePath("/security", "layout");
+  revalidatePath("/admin", "layout");
+  if (enabled) redirect(status.hasVerifiedFactor ? "/security/verify?next=/security/settings" : "/security/setup");
+  return { ok: true, message: s.adminMfaSaved };
+}
 
 export interface EnrollmentStart {
   ok: boolean;

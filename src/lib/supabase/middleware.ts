@@ -43,8 +43,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isPrivate) {
     if (!claims) return redirectTo("/login", true);
-    // Dashboard pages check the server-side role-aware gate. Only admin always needs AAL2.
-    if (path.startsWith("/admin") && claims.aal !== "aal2") return redirectTo("/security", true);
+    // Pages and database policies enforce the per-account MFA policy and role.
   }
   if (isSecurity && !claims && path !== "/security/session-ended") {
     return redirectTo("/login", false);

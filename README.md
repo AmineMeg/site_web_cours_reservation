@@ -71,7 +71,7 @@ src/
    Then run the feature migrations in order: `student-password-login.sql`,
    `website.sql`, `blog.sql`, `homepage-images.sql`, `student-reviews.sql`,
    `teacher-booking.sql`, `trial-and-credit-rules.sql`, `eliane-teixeira.sql`,
-   and **`public-trial-booking.sql` last**.
+   `public-trial-booking.sql`, and **`admin-mfa-settings.sql` last**.
 3. **Auth settings**: *Authentication → Sign In / Providers* → turn **off** "Allow new users to sign up"
    (only the teacher creates student accounts).
 4. **Teacher account**: *Authentication → Users → Add user* (email + password, "Auto confirm"), then in the SQL editor:
@@ -130,7 +130,8 @@ this application's Resend/webhook sender) are managed separately in Supabase.
 
 ### Current policy: teacher MFA, student passwords
 
-Students sign in with email and password only. The teacher still requires TOTP MFA.
+Students sign in with email and password only. Administrators require TOTP MFA by default,
+with a per-account setting described below.
 Password policies, rate limits, ownership rules and finite sessions remain enabled
 for everyone.
 
@@ -139,7 +140,39 @@ Run [`supabase/student-password-login.sql`](supabase/student-password-login.sql)
 deploying this version. It removes existing **student** MFA factors and recovery
 codes and ends their old sessions; teacher factors are not removed. Students must
 sign in again. If you later re-run `schema.sql` or `security.sql`, re-run this
-role-policy migration last, because the older scripts enforce MFA for all accounts.
+role-policy migration after the older scripts, followed by `admin-mfa-settings.sql`,
+because the older scripts enforce MFA for all accounts.
+
+### Per-administrator MFA setting and an additional administrator
+
+Run [`supabase/admin-mfa-settings.sql`](supabase/admin-mfa-settings.sql) after the
+student-login and feature migrations. Default behavior is unchanged: every admin
+requires MFA unless that specific account has opted out. Missing settings fail
+closed to mandatory MFA. This migration neither removes authenticator factors nor
+changes student accounts, session limits, passwords or administrator roles.
+
+**Segurança da conta** shows administrators an enable/disable control for their
+**own** account only; students never see or use it. Changes require the current
+password, rate-limited server verification and a recent TOTP check if MFA is enabled.
+Enabling immediately requires configuring/verifying an authenticator, including
+on existing AAL1 sessions. Other administrators are unaffected. Changes are logged
+atomically and a security email is attempted. The setting table cannot be written
+by API callers; only the server-only guarded action or trusted SQL administration
+can change it. Reapply this migration after rerunning older security scripts.
+
+To provision the requested additional administrator:
+
+1. Supabase **Authentication → Users → Add user**: create the requested email and
+   a unique password of at least **15 characters** directly there, with email auto-confirm enabled. Never put the password
+   in a committed SQL script, environment example or command history.
+2. Apply `admin-mfa-settings.sql`.
+3. Run [`supabase/add-miguel-admin.sql`](supabase/add-miguel-admin.sql). It promotes
+   only the specified existing Auth account and initially disables MFA only for it.
+   It fails if the Auth account/profile is missing. Rerunning does not disable MFA
+   after it has been reactivated. Eliane's role and MFA settings are unchanged.
+4. Deploy the matching application code. Sign in and use **Segurança da conta**
+   to re-enable MFA when ready. Use a unique strong password; a password shared
+   through chat should be changed before real-world use.
 
 Invitation links accept Supabase SHA-224 (56 hex characters) and SHA-256 token
 hashes. An already consumed or expired link cannot be revived by this fix: send a

@@ -7,6 +7,7 @@ import { SessionControls } from "@/components/security/SessionControls";
 import { SecurityPasswordForm } from "@/components/SecurityPasswordForm";
 import { securityText as s } from "@/lib/i18n/security";
 import { t } from "@/lib/i18n";
+import { AdminMfaSetting } from "@/components/security/AdminMfaSetting";
 
 export default async function SecuritySettingsPage() {
   const { supabase, user, status } = await requireMfa();
@@ -36,7 +37,10 @@ export default async function SecuritySettingsPage() {
           {s.backToApp}
         </Link>
       </div>
-      <p className="text-lg text-stone-600">{status.requiresMfa ? s.settingsIntro : s.studentSettingsIntro}</p>
+      <p className="text-lg text-stone-600">{status.requiresMfa ? s.settingsIntro :
+        profile.role === "teacher" ? s.adminPasswordIntro : s.studentSettingsIntro}</p>
+
+      {profile.role === "teacher" && <AdminMfaSetting enabled={status.requiresMfa} />}
 
       {status.requiresMfa && <>
       <section className="space-y-3">
