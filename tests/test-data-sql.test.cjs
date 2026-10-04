@@ -68,6 +68,19 @@ test("demo seed, cleanup safety, real schema constraints and exact scenario coun
       assert.equal(await count("blog_posts"), 3);
       assert.equal(await count("blog_posts", "status='published' and published_at is not null"), 2);
       assert.equal(await count("blog_posts", "status='draft' and published_at is null"), 1);
+      for (const article of (await db.query("select * from blog_posts order by slug")).rows) {
+        const nodes = article.document.content;
+        const text = nodes.flatMap(node => node.content || []).map(node => node.text || "").join(" ");
+        assert.ok(text.trim().split(/\s+/u).length >= 500, `${article.slug} must contain at least 500 words`);
+        assert.equal(nodes.filter(node => node.type === "heading").length, 4);
+        assert.equal(nodes.filter(node => node.type === "paragraph").length, 12);
+        assert.match(text, /aula|professora/u);
+        assert.doesNotMatch(article.title + " " + text, /TESTE|demonstração|fictíci/iu);
+      }
+      assert.equal((await one("select full_name from profiles where email='demo-student-1@example.invalid'")).full_name, "Ana Carolina Silva");
+      assert.equal((await one("select name from contacts where email='demo-contact-1@example.invalid'")).name, "Fernanda Souza");
+      assert.equal(await count("student_reviews", "quote like '%TESTE%' or display_name like '%TESTE%'"), 0);
+      assert.equal((await one("select count(distinct quote)::int n from student_reviews")).n, 7);
       assert.equal(await count("messages"), 12);
       assert.equal(await count("trial_bookings"), 14);
       assert.equal(await count("trial_bookings", "status='booked' and starts_at>now()"), 5);
@@ -98,6 +111,82 @@ test("demo seed, cleanup safety, real schema constraints and exact scenario coun
       assert.equal((await db.query("select * from get_public_reviews()")).rows.length, 4);
       await assert.rejects(db.query("select * from demo_test_fixtures"), /permission denied/);
       await db.exec("reset role");
+    });
+
+    await t.test("article-only refresh preserves other fixtures, URLs, publication states and dates", async () => {
+      const source = confirmed("seed-test-data.sql").replace("refresh_articles boolean := false;", "refresh_articles boolean := true;");
+      const existing = (await one("select id from blog_posts where slug='demo-test-article-1'")).id;
+      const missing = (await one("select id from blog_posts where slug='demo-test-article-3'")).id;
+      await db.query("delete from demo_test_fixtures where kind='blog' and id=$1", [missing]);
+      await fails(source, /Expected all three tracked demo articles/);
+      await db.query("insert into demo_test_fixtures(kind,id) values('blog',$1)", [missing]);
+      await db.query("update blog_posts set title='Old short article',status='draft' where id=$1", [existing]);
+      const sentinel = (await one("insert into blog_posts(title,slug) values('Unrelated draft','refresh-sentinel') returning *"));
+      const oldArticles = (await db.query("select id,slug,status,created_at,published_at from blog_posts order by slug")).rows;
+      const before = {};
+      for (const table of ["profiles", "bookings", "trial_bookings", "contacts", "messages", "credit_batches", "student_reviews", "demo_test_fixtures"]) {
+        before[table] = (await db.query(`select * from ${table} order by ${table === "demo_test_fixtures" ? "kind,id" : "id"}`)).rows;
+      }
+      await db.exec(source);
+      assert.deepEqual((await db.query("select id,slug,status,created_at,published_at from blog_posts order by slug")).rows, oldArticles);
+      assert.deepEqual(await one("select * from blog_posts where id=$1", [sentinel.id]), sentinel);
+      assert.match((await one("select title from blog_posts where id=$1", [existing])).title, /Espanhol para viajar/u);
+      for (const [table, rows] of Object.entries(before)) {
+        assert.deepEqual((await db.query(`select * from ${table} order by ${table === "demo_test_fixtures" ? "kind,id" : "id"}`)).rows, rows, table);
+      }
+      await db.query("delete from blog_posts where id=$1", [sentinel.id]);
+    });
+
+    await t.test("demo presentation refresh replaces legacy labels without changing schedules, balances, statuses or unrelated rows", async () => {
+      const source = confirmed("seed-test-data.sql").replace("refresh_demo_presentation boolean := false;", "refresh_demo_presentation boolean := true;");
+      await db.exec(`
+        update profiles set full_name='[TESTE] Ana',objectives='[TESTE] Praticar conversação',
+          teacher_notes='Dados fictícios. Sem senha, sem acesso e sem telefone real.'
+          where id='d3100000-0000-4000-8000-000000000001';
+        update contacts set name='[TESTE] Contato 01',message='[TESTE] Quero aprender'
+          where email='demo-contact-1@example.invalid';
+        update messages set body='[MENSAGEM DE TESTE 1] Minha dúvida';
+        update student_reviews set display_name='[TESTE] Aluno',quote='[AVALIAÇÃO FICTÍCIA DE TESTE] As aulas são acolhedoras.';
+        update bookings set cancel_message='[TESTE] Cancelamento para verificar o histórico.' where status='cancelled';
+        update trial_bookings set cancel_message='[TESTE] Ensaio cancelado.' where status='cancelled';
+        update blog_posts set title='[TESTE] '||title;
+      `);
+      const sentinel = (await one("insert into contacts(name,email,message) values('[TESTE] Do not touch','presentation-sentinel@example.invalid','[TESTE] Preserve') returning *"));
+      const before = {};
+      for (const table of ["credit_batches", "demo_test_fixtures"]) {
+        before[table] = (await db.query(`select * from ${table} order by ${table === "demo_test_fixtures" ? "kind,id" : "id"}`)).rows;
+      }
+      const lessons = (await db.query("select id,student_id,starts_at,ends_at,status,credit_batch_id,credits_used from bookings order by id")).rows;
+      const trials = (await db.query("select id,contact_id,starts_at,ends_at,status from trial_bookings order by id")).rows;
+      const reviews = (await db.query("select id,student_id,status,consent_at from student_reviews order by id")).rows;
+      const articles = (await db.query("select id,slug,status,created_at,published_at,document from blog_posts order by id")).rows;
+      await db.exec("update profiles set role='teacher' where id='d3100000-0000-4000-8000-000000000001'");
+      await fails(source, /repurposed/);
+      await db.exec("update profiles set role='student' where id='d3100000-0000-4000-8000-000000000001'");
+      await db.exec(source);
+      for (const [table, rows] of Object.entries(before)) {
+        assert.deepEqual((await db.query(`select * from ${table} order by ${table === "demo_test_fixtures" ? "kind,id" : "id"}`)).rows, rows);
+      }
+      assert.deepEqual((await db.query("select id,student_id,starts_at,ends_at,status,credit_batch_id,credits_used from bookings order by id")).rows, lessons);
+      assert.deepEqual((await db.query("select id,contact_id,starts_at,ends_at,status from trial_bookings order by id")).rows, trials);
+      assert.deepEqual((await db.query("select id,student_id,status,consent_at from student_reviews order by id")).rows, reviews);
+      assert.deepEqual((await db.query("select id,slug,status,created_at,published_at,document from blog_posts order by id")).rows, articles);
+      assert.deepEqual(await one("select * from contacts where id=$1", [sentinel.id]), sentinel);
+      assert.equal((await one("select full_name from profiles where id='d3100000-0000-4000-8000-000000000001'")).full_name, "Ana Carolina Silva");
+      assert.equal((await one("select raw_user_meta_data->>'full_name' name from auth.users where id='d3100000-0000-4000-8000-000000000001'")).name, "Ana Carolina Silva");
+      assert.equal(await count("student_reviews", "display_name like '%TESTE%' or quote like '%TESTE%'"), 0);
+      assert.equal(await count("messages", "body like '%TESTE%'"), 0);
+      assert.equal(await count("blog_posts", "title like '%TESTE%'"), 0);
+      assert.equal((await one("select name from contacts where email='demo-contact-1@example.invalid'")).name, "Fernanda Souza");
+      await db.query("delete from contacts where id=$1", [sentinel.id]);
+      await db.exec(`update blog_posts set document=jsonb_set(document,'{content}',
+        jsonb_build_array(jsonb_build_object('type','paragraph','content',jsonb_build_array(
+          jsonb_build_object('type','text','text','Artigo de demonstração para testar o blog e preparar atividades de espanhol.'))))
+        || (document->'content'))`);
+      await db.exec(source);
+      assert.deepEqual((await db.query("select id,slug,status,created_at,published_at,document from blog_posts order by id")).rows, articles);
+      await db.exec(source.replace("refresh_articles boolean := false;", "refresh_articles boolean := true;"));
+      assert.deepEqual((await db.query("select id,slug,status,created_at,published_at,document from blog_posts order by id")).rows, articles);
     });
 
     await t.test("reruns preserve edits, IDs and dates, and fixture removal keeps unrelated records", async () => {

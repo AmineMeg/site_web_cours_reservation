@@ -34,7 +34,10 @@ export function Hero({ content, preview = false }: { content?: HomepageContent; 
           <div className="absolute inset-0 rounded-[3rem] bg-white text-center shadow-xl">
             <HomepageImage field="heroImage" src={content?.heroImage} alt={h.title}>
               <span aria-hidden className="flex h-full flex-col items-center justify-center gap-4">
-                <span className="text-8xl">🇪🇸</span>
+                <svg viewBox="0 0 30 20" className="h-20 w-28 rounded-md shadow-sm" aria-hidden="true" focusable="false">
+                  <path fill="#AA151B" d="M0 0h30v20H0z" />
+                  <path fill="#F1BF00" d="M0 5h30v10H0z" />
+                </svg>
                 <span className="text-3xl font-bold text-stone-800">¿Hablamos?</span>
               </span>
             </HomepageImage>

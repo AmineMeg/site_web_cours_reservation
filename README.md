@@ -521,9 +521,13 @@ The seed creates:
 | Credits | Normal available balances, two batches expiring in 3 days, and expired credits excluded from the available balance |
 | 7 reviews | 4 approved and 3 pending, each backed by 5 completed lessons |
 | 12 messages | Several messages from the same student and different received dates |
-| 3 Portuguese articles | 2 published + 1 draft, editable rich-text documents |
+| 3 Portuguese articles | 2 published + 1 draft; each has at least 500 words, 4 sections, Spanish examples and exercises: travel, conversation, false friends/pronunciation |
 
-All records are clearly labelled `[TESTE]` or fictional. Emails use the reserved
+Names, messages, reviews and articles are presented naturally without visible test
+labels on the dedicated demo site. Names are fictional, not actual student identities;
+reviews are synthetic and must never be used as real testimonials on production.
+Ownership remains recorded privately in `demo_test_fixtures` and Auth metadata.
+Emails use the reserved
 `example.invalid` domain, phones are empty, and the script sends no notifications.
 The ten Auth rows exist only to satisfy profile foreign keys: **no passwords or
 login identities**, unconfirmed emails and bans through 2099. Do not use these
@@ -541,6 +545,27 @@ run the fixture-removal script and then seed again. Running the all-contacts pur
 does not remove this registry or the seeded students; use fixture removal before
 reseeding. If a selected historical slot conflicts with existing lessons, the seed
 aborts instead of overwriting them.
+
+To replace **only the three seeded article texts**, use the updated
+[`supabase/seed-test-data.sql`](supabase/seed-test-data.sql) with both
+`confirmed_demo := true` and `refresh_articles := true`, and execute the entire script.
+This explicitly overwrites their titles, excerpts and documents, including manual
+content edits; back up any edits first. It preserves their IDs, slugs/URLs,
+publication statuses and publication dates, all unrelated articles and every
+non-blog fixture. Missing or untracked demo articles cause an error and rollback.
+Keep `refresh_articles := false` for normal reruns that must preserve content edits.
+The third article remains a draft unless you explicitly publish it in the admin.
+
+To update existing fixtures to realistic fictional names and remove legacy visible
+labels, additionally set `refresh_demo_presentation := true` in
+[`supabase/seed-test-data.sql`](supabase/seed-test-data.sql). For both the new article
+content and the natural presentation, enable all three flags (`confirmed_demo`,
+`refresh_articles`, `refresh_demo_presentation`) and run the entire script.
+This explicitly replaces fixture names and review text, strips legacy message
+prefixes and normalizes generated notes/cancellation messages; back up manual edits
+first. Only recorded fixtures are changed. Credits, lesson dates, trial links,
+review statuses, account bans and non-fixture rows are preserved. Normal reruns
+with both refresh flags `false` still preserve all edits.
 
 For demo trial management links, contacts 01–10 have token `i` expressed as 64-digit
 lowercase hexadecimal (01 = 63 zeros + `1`, 10 = 63 zeros + `a`). Open
