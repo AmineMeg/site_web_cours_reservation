@@ -18,6 +18,7 @@ import { lessonRules as r } from "@/lib/i18n/lesson-rules";
 import { validLocation } from "@/lib/timezones";
 import { newTrialToken } from "@/lib/trial";
 import type { TrialBooking } from "@/lib/types";
+import { removalText as d } from "@/lib/i18n/removal";
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^\d{2}:\d{2}(:\d{2})?$/;
@@ -99,13 +100,35 @@ export async function createStudentFromContact(contactId: string): Promise<Actio
 
 export async function deleteContact(contactId: string): Promise<ActionResult> {
   const { supabase } = await requireTeacher();
-  const { error } = await supabase.from("contacts").delete().eq("id", contactId);
-  if (error) {
-    console.error("[admin] Contact removal failed", error.code);
-    return fail(r.contactHistory);
+  const { data, error } = await supabase.rpc("remove_contact", { p_id: contactId });
+  if (error || (data !== "archived" && data !== "deleted")) {
+    console.error("[admin] Contact removal failed", error?.code ?? "INVALID_RESULT");
+    return fail(error?.message.includes("CONTACT_NOT_FOUND") ? d.contactMissing : t.common.error);
   }
   revalidatePath("/admin", "layout");
-  return { ok: true, message: t.admin.contacts.removed };
+  return { ok: true, message: data === "archived" ? d.hidden : t.admin.contacts.removed };
+}
+
+export async function restoreContact(contactId: string): Promise<ActionResult> {
+  const { supabase } = await requireTeacher();
+  const { error } = await supabase.rpc("restore_contact", { p_id: contactId });
+  if (error) {
+    console.error("[admin] Contact restoration failed", error.code);
+    return fail(error.message.includes("CONTACT_NOT_FOUND") ? d.contactMissing : t.common.error);
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: d.restored };
+}
+
+export async function deleteStudentMessage(messageId: string): Promise<ActionResult> {
+  const { supabase } = await requireTeacher();
+  const { data, error } = await supabase.from("messages").delete().eq("id", messageId).select("id").maybeSingle();
+  if (error || !data) {
+    console.error("[admin] Message removal failed", error?.code ?? "MESSAGE_NOT_FOUND");
+    return fail(error ? t.common.error : d.messageMissing);
+  }
+  revalidatePath("/admin/messages");
+  return { ok: true, message: d.messageDeleted };
 }
 
 export async function resendTrialLink(contactId: string): Promise<ActionResult> {

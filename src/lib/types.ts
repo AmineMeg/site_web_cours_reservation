@@ -30,6 +30,7 @@ export interface Contact {
   city: string;
   timezone: string;
   trial_declined_at: string | null;
+  archived_at: string | null;
 }
 
 export interface TrialBooking {

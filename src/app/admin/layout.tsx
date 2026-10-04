@@ -9,7 +9,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { count, error } = await supabase
     .from("contacts")
     .select("id", { count: "exact", head: true })
-    .is("converted_at", null);
+    .is("converted_at", null)
+    .is("archived_at", null);
   if (error) {
     console.error("[admin] Contact count unavailable", error.code);
     throw new Error(t.common.error);

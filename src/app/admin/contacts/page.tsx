@@ -5,17 +5,21 @@ import { CONTACT_RETENTION_DAYS } from "@/lib/config";
 import { formatDate } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { Contact, TrialBooking } from "@/lib/types";
+import Link from "next/link";
+import { removalText as d } from "@/lib/i18n/removal";
 
-export default async function ContactsPage() {
+export default async function ContactsPage({ searchParams }: { searchParams: Promise<{ archived?: string }> }) {
+  const archived = (await searchParams).archived === "1";
   const { supabase } = await requireTeacher();
   const settings = await getSettings(supabase);
 
   const now = Date.now();
-  const { data, error } = await supabase
+  let query = supabase
     .from("contacts")
     .select("*")
-    .is("converted_at", null)
-    .order("created_at", { ascending: false });
+    .is("converted_at", null);
+  query = archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+  const { data, error } = await query.order("created_at", { ascending: false });
   if (error) {
     console.error("[admin] Contacts unavailable", error.code);
     throw new Error(t.common.error);
@@ -30,9 +34,11 @@ export default async function ContactsPage() {
 
   return (
     <>
-      <PageTitle title={t.admin.contacts.title} intro={t.admin.contacts.intro} />
+      <PageTitle title={archived ? d.hiddenContacts : t.admin.contacts.title} intro={archived ? d.hiddenIntro : t.admin.contacts.intro} />
+      <Link href={archived ? "/admin/contacts" : "/admin/contacts?archived=1"}
+        className="mb-6 inline-block text-lg font-semibold text-brand-700 underline">{archived ? d.activeContacts : d.hiddenContacts}</Link>
       {contacts.length === 0 ? (
-        <p className="card text-center text-xl text-stone-600">{t.admin.contacts.empty}</p>
+        <p className="card text-center text-xl text-stone-600">{archived ? d.hiddenEmpty : t.admin.contacts.empty}</p>
       ) : (
         <ul className="space-y-6">
           {contacts.map((contact) => {

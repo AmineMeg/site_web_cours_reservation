@@ -183,7 +183,7 @@ test("public and admin surfaces show policy, location fields, trial labels and a
   assert.match(html, /<button[^>]+disabled=""[^>]*>✅ Criar conta de aluno/);
   assert.match(html, /Aula experimental gratuita · 30 minutos/);
   assert.doesNotMatch(html, /Paris, France/);
-  assert.doesNotMatch(html, /🗑️/);
+  assert.match(html, /🗑️ Ocultar contato/);
 });
 
 test("student and teacher profile forms omit city and updates preserve historical city data", async () => {

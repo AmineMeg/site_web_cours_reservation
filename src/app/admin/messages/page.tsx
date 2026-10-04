@@ -3,6 +3,7 @@ import { PageTitle } from "@/components/ui/Notice";
 import { buttonClass } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/dates";
 import { t } from "@/lib/i18n";
+import { DeleteMessageButton } from "@/components/admin/DeleteMessageButton";
 
 interface MessageRow {
   id: string;
@@ -14,11 +15,15 @@ interface MessageRow {
 export default async function MessagesPage() {
   const { supabase } = await requireTeacher();
   const settings = await getSettings(supabase);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("messages")
     .select("id, body, created_at, student:profiles(full_name, email, phone)")
     .order("created_at", { ascending: false })
     .limit(100);
+  if (error) {
+    console.error("[admin] Messages unavailable", error.code);
+    throw new Error(t.common.error);
+  }
   const messages = (data ?? []) as unknown as MessageRow[];
   const m = t.admin.messages;
 
@@ -41,6 +46,7 @@ export default async function MessagesPage() {
                   ↩️ {m.reply}
                 </a>
               )}
+              <DeleteMessageButton id={msg.id} />
             </li>
           ))}
         </ul>

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { createStudentFromContact, deleteContact, resendTrialLink, declineContact } from "@/app/admin/actions";
+import { createStudentFromContact, deleteContact, restoreContact, resendTrialLink, declineContact } from "@/app/admin/actions";
 import { buttonClass } from "@/components/ui/button";
 import { Notice } from "@/components/ui/Notice";
 import { t } from "@/lib/i18n";
 import type { ActionResult, Contact, TrialBooking } from "@/lib/types";
 import { lessonRules as r } from "@/lib/i18n/lesson-rules";
 import { formatDateTime } from "@/lib/dates";
+import { removalText as d } from "@/lib/i18n/removal";
 
 export function ContactCard({
   contact,
@@ -39,7 +40,7 @@ export function ContactCard({
     });
 
   const remove = () => {
-    if (!window.confirm(c.removeConfirm(contact.name))) return;
+    if (!window.confirm(hasTrialHistory ? d.hideConfirm(contact.name) : c.removeConfirm(contact.name))) return;
     startTransition(async () => {
       setResult(await deleteContact(contact.id));
     });
@@ -75,6 +76,9 @@ export function ContactCard({
         </div>
 
         <div className="flex shrink-0 flex-col gap-3 lg:w-72">
+          {contact.archived_at ? <button type="button" disabled={pending}
+            onClick={() => startTransition(async () => setResult(await restoreContact(contact.id)))}
+            className={buttonClass("secondary", "lg", "w-full")}>{d.restore}</button> : <>
           <p>{contact.trial_declined_at ? r.declined : canConvert ? r.ready : r.waitingStart}</p>
           <button type="button" onClick={convert} disabled={pending || !canConvert} className={buttonClass("success", "xl", "w-full")}>
             {pending ? c.creating : `✅ ${c.createAccount}`}
@@ -85,9 +89,10 @@ export function ContactCard({
           {canConvert && <button type="button" disabled={pending} onClick={() => {
             if (window.confirm(r.declineConfirm)) startTransition(async () => setResult(await declineContact(contact.id)));
           }} className={buttonClass("danger", "lg", "w-full")}>{r.decline}</button>}
-          {!hasTrialHistory && <button type="button" onClick={remove} disabled={pending} className={buttonClass("ghost", "md", "w-full")}>
-            🗑️ {c.remove}
-          </button>}
+          <button type="button" onClick={remove} disabled={pending} className={buttonClass("danger", "lg", "w-full")}>
+            🗑️ {hasTrialHistory ? d.hide : c.remove}
+          </button>
+          </>}
         </div>
       </div>
       {result && (

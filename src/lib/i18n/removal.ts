@@ -1,0 +1,16 @@
+export const removalText = {
+  hide: "Ocultar contato",
+  hideConfirm: (name: string) => `Ocultar ${name} desta lista? A aula experimental e o histórico serão mantidos. Você pode recuperá-lo em “Contatos ocultos”.`,
+  hidden: "Contato ocultado. A aula experimental e o histórico foram mantidos.",
+  hiddenContacts: "Contatos ocultos",
+  activeContacts: "Voltar aos contatos",
+  hiddenIntro: "Estes contatos estão ocultos. Suas aulas e seu histórico continuam salvos.",
+  hiddenEmpty: "Nenhum contato oculto.",
+  restore: "Mostrar novamente",
+  restored: "Contato devolvido à lista.",
+  contactMissing: "Este contato não está mais disponível. Atualize a página.",
+  deleteMessage: "Excluir mensagem",
+  messageConfirm: "Excluir esta mensagem definitivamente? A conta do aluno e suas aulas não serão alteradas. Não é possível desfazer.",
+  messageDeleted: "Mensagem excluída.",
+  messageMissing: "Esta mensagem não está mais disponível. Atualize a página.",
+};

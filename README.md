@@ -71,7 +71,7 @@ src/
    Then run the feature migrations in order: `student-password-login.sql`,
    `website.sql`, `blog.sql`, `homepage-images.sql`, `student-reviews.sql`,
    `teacher-booking.sql`, `trial-and-credit-rules.sql`, `eliane-teixeira.sql`,
-   `public-trial-booking.sql`, and **`admin-mfa-settings.sql` last**.
+   `public-trial-booking.sql`, `admin-removal.sql`, and **`admin-mfa-settings.sql` last**.
 3. **Auth settings**: *Authentication → Sign In / Providers* → turn **off** "Allow new users to sign up"
    (only the teacher creates student accounts).
 4. **Teacher account**: *Authentication → Users → Add user* (email + password, "Auto confirm"), then in the SQL editor:
@@ -467,6 +467,91 @@ Database locking serializes teacher and student bookings, credit use is atomic,
 and retries of the same request do not consume another credit or send another email.
 Gifted lessons are labelled **Aula oferecida**. Cancelling one changes no credits;
 cancelling a charged lesson refunds exactly the credit used, only once.
+
+### Removing contacts and student messages
+
+Run [`supabase/admin-removal.sql`](supabase/admin-removal.sql) after the trial
+migration before deploying removal controls. Administrators can permanently remove
+contacts with no trial history. Contacts with any trial history (including cancelled
+trials) are instead hidden from **Novos contatos** and its sidebar count. No lesson
+is cancelled and no link/history is removed. **Contatos ocultos → Mostrar novamente**
+restores the contact for later account decisions. The teacher calendar still shows
+its trial. Removal is serialized with bookings so a simultaneous booking cannot be
+orphaned. Converted contacts are not removed by this control.
+
+Every student message has an **Excluir mensagem** button with confirmation. This
+permanently removes only that message, not the student account, lessons or an email
+already sent. Database RLS restricts deletion to administrators; students cannot
+delete their own or others' messages. Missing rows and database errors are reported.
+
+### Database cleanup and comprehensive test fixtures
+
+These scripts are **manual SQL Editor operations**, not application migrations.
+They do not run on deployment. Take a backup and check the selected Supabase project
+first. Their confirmation flags default to `false`: an unmodified script raises an
+error and rolls back, leaving data unchanged.
+
+- [`supabase/empty-contacts-and-messages.sql`](supabase/empty-contacts-and-messages.sql):
+  set `confirmed := true` to delete **all contacts**, their trial links and
+  trial bookings (including cancelled/converted histories), and **all student messages**.
+  Auth users, profiles, regular lessons, credit batches, reviews, articles, settings
+  and administrators remain unchanged. This is deliberately more destructive than
+  the admin's hide-contact button. It cannot be undone without a backup.
+- [`supabase/seed-test-data.sql`](supabase/seed-test-data.sql):
+  **dedicated demo database only**, after the normal migration chain including
+  [`supabase/admin-removal.sql`](supabase/admin-removal.sql).
+  Set `confirmed_demo := true`. It creates the fixtures below in one transaction,
+  preserving administrators, working hours, blocked dates and settings. Configure
+  enough weekly availability first: future slots obey actual notice, windows,
+  blocks and overlaps; insufficient availability rolls back the entire seed.
+- [`supabase/remove-test-data.sql`](supabase/remove-test-data.sql):
+  set `confirmed_demo := true` to remove only recorded fixtures. It refuses to delete
+  repurposed accounts or accounts/contacts with new untracked dependent data.
+  Review those rows manually before retrying. Existing administrators and unrelated
+  records are preserved. Fixture audit entries remain in the security audit log.
+
+The seed creates:
+
+| Data | Scenarios |
+| --- | --- |
+| 20 contacts | 01–04 valid unbooked links; 05 expired link; 06–10 future 30-minute trials; 11–12 completed trials ready for approval; 13 declined; 14 hidden with past trial; 15–17 cancelled trials; 18 older than 30 days without a trial; 19 converted; 20 hidden with past trial |
+| 10 students | 9 active, 1 inactive; Brazil, New York, France and Japan; objectives and teacher notes |
+| 57 regular lessons | 39 completed, 8 future (7 prepaid + 1 gift), 10 cancelled |
+| 14 trials | 5 future, 6 past, 3 cancelled |
+| Credits | Normal available balances, two batches expiring in 3 days, and expired credits excluded from the available balance |
+| 7 reviews | 4 approved and 3 pending, each backed by 5 completed lessons |
+| 12 messages | Several messages from the same student and different received dates |
+| 3 Portuguese articles | 2 published + 1 draft, editable rich-text documents |
+
+All records are clearly labelled `[TESTE]` or fictional. Emails use the reserved
+`example.invalid` domain, phones are empty, and the script sends no notifications.
+The ten Auth rows exist only to satisfy profile foreign keys: **no passwords or
+login identities**, unconfirmed emails and bans through 2099. Do not use these
+accounts for student-login testing or real students. SQL insertion into Auth is
+limited to this disposable demo database; real accounts must use Supabase Auth APIs.
+Future UI actions can still attempt notifications to these invalid addresses and
+will report delivery errors; this dataset does not test real email delivery.
+Review-invitation cron has no eligible, unreviewed fixture student to notify at
+initial seeding. Contact 18 is intentionally eligible for automatic deletion.
+
+Dates are relative to execution time. The seed uses a private, API-inaccessible
+`demo_test_fixtures` registry to track ownership. Rerunning it leaves existing edits
+and dates untouched and prints a notice; to refresh dates or replenish removed rows,
+run the fixture-removal script and then seed again. Running the all-contacts purge
+does not remove this registry or the seeded students; use fixture removal before
+reseeding. If a selected historical slot conflicts with existing lessons, the seed
+aborts instead of overwriting them.
+
+For demo trial management links, contacts 01–10 have token `i` expressed as 64-digit
+lowercase hexadecimal (01 = 63 zeros + `1`, 10 = 63 zeros + `a`). Open
+`/trial/<token>` on the demo deployment; contact 05's token is intentionally expired.
+These predictable tokens are **strictly demo-only**. Production trial tokens remain
+random. Raw tokens are not stored, only their SHA-256 hashes.
+
+If the earlier optional three-testimonial demo was installed, run
+[`supabase/remove-demo-reviews.sql`](supabase/remove-demo-reviews.sql) before this
+seed to get exactly four public approved reviews without the three extra demo cards.
+No real consent is claimed: these are synthetic moderation fixtures.
 
 ### Free trials, expiring credits and worldwide lessons
 
